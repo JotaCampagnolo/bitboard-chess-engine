@@ -150,7 +150,7 @@ int main()
 
 	// Loop over 64 board squares:
 	for (int square = 0; square < 64; square++)
-		print_bitboard(pawn_attacks[white][square]);
-	
+		print_bitboard(pawn_attacks[black][square]);
+
 	return 0;
 }
