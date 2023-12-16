@@ -26,6 +26,9 @@ enum
 	a1, b1, c1, d1, e1, f1, g1, h1
 };
 
+// Enumerate sides to move (colors):
+enum { white, black };
+
 /******************************************************************************\
 ============================== BIT MANIPULATION ================================
 \******************************************************************************/
@@ -40,7 +43,7 @@ void print_bitboard(U64 bitboard)
 {
 	// Print horizontal top border:
 	printf("\n");
-	printf("+---------------------------------------+\n");
+	printf("\033[0;30m+---------------------------------------+\n");
 	printf("|                                       |\n");
 	// Loop over board ranks:
 	for (int rank = 0; rank < 8; rank++)
@@ -53,9 +56,9 @@ void print_bitboard(U64 bitboard)
 			// Convert the file and rank into square index:
 			int square = rank * 8 + file;
 			// Print rank label:
-			if (!file) printf("| %1d |", 8 - rank);
+			if (!file) printf("| \e[0m%1d\033[0;30m |", 8 - rank);
 			// Print bit state (either 1 or 0):
-			printf(" %d |", get_bit(bitboard, square) ? 1 : 0 );
+			get_bit(bitboard, square) ? printf(" \033[0;33m%d\033[0;30m |", 1) : printf(" %d\033[0;30m |", 0);
 			if (file == 7) printf("   |");
 		}
 		// Print a new line after every rank:
@@ -63,10 +66,77 @@ void print_bitboard(U64 bitboard)
 	}
 	// Print horizontal bottom border:
 	printf("|   +---+---+---+---+---+---+---+---+   |\n");
-	printf("|     a   b   c   d   e   f   g   h     |\n");
+	printf("|     \e[0ma   b   c   d   e   f   g   h\033[0;30m     |\n");
 	printf("+---------------------------------------+\n\n");
 	// Print the bitboard as unsigned decimal number:
-	printf("Bitboard state: %llu\n\n", bitboard);
+	printf("\e[0mBitboard state: %llu\n\n", bitboard);
+}
+
+/******************************************************************************\
+=================================== ATTACKS ====================================
+\******************************************************************************/
+
+/*
+
+	=	NOT A FILE:				=	NOT H FILE:				=	NOT AB FILE:			=	NOT HG FILE:
+
+	8 0 1 1 1 1 1 1 1		8 1 1 1 1 1 1 1 0		8 0 0 1 1 1 1 1 1		8 1 1 1 1 1 1 0 0
+	7 0 1 1 1 1 1 1 1		7 1 1 1 1 1 1 1 0		7 0 0 1 1 1 1 1 1		7 1 1 1 1 1 1 0 0
+	6 0 1 1 1 1 1 1 1		6 1 1 1 1 1 1 1 0		6 0 0 1 1 1 1 1 1		6 1 1 1 1 1 1 0 0
+	5 0 1 1 1 1 1 1 1		5 1 1 1 1 1 1 1 0		5 0 0 1 1 1 1 1 1		5 1 1 1 1 1 1 0 0
+	4 0 1 1 1 1 1 1 1		4 1 1 1 1 1 1 1 0		4 0 0 1 1 1 1 1 1		4 1 1 1 1 1 1 0 0
+	3 0 1 1 1 1 1 1 1		3 1 1 1 1 1 1 1 0		3 0 0 1 1 1 1 1 1		3 1 1 1 1 1 1 0 0
+	2 0 1 1 1 1 1 1 1		2 1 1 1 1 1 1 1 0		2 0 0 1 1 1 1 1 1		2 1 1 1 1 1 1 0 0
+	1 0 1 1 1 1 1 1 1		1 1 1 1 1 1 1 1 0		1 0 0 1 1 1 1 1 1		1 1 1 1 1 1 1 0 0
+		a b c d e f g h			a b c d e f g h			a b c d e f g h			a b c d e f g h
+
+*/
+
+// Not specific files constants:
+const U64 not_a_file = 18374403900871474942ULL;
+const U64 not_h_file = 9187201950435737471ULL;
+const U64 not_ab_file = 18229723555195321596ULL;
+const U64 not_hg_file = 4557430888798830399ULL;
+
+// Pawn attacks table [side][square]:
+U64 pawn_attacks[2][64];
+
+// Generate pawns attacks:
+U64 mask_pawn_attacks(int side, int square)
+{
+	// Result attacks bitboard:
+	U64 attacks = 0ULL;
+	// Piece bitboard:
+	U64 bitboard = 0ULL;
+	// Set piece on board:
+	set_bit(bitboard, square);
+	// White pawns:
+	if(!side)
+	{
+		if ((bitboard >> 7) & not_a_file) attacks |= (bitboard >> 7);
+		if ((bitboard >> 9) & not_h_file) attacks |= (bitboard >> 9);
+	}
+	// Black pawns:
+	else
+	{
+		if ((bitboard << 7) & not_h_file) attacks |= (bitboard << 7);
+		if ((bitboard << 9) & not_a_file) attacks |= (bitboard << 9);
+	}
+	// Return attacks:
+	return attacks;
+}
+
+// Initialize leaper pieces attacks:
+void init_leapers_attacks()
+{
+	// Loop over 64 board squares:
+	for (int square = 0; square < 64; square++)
+	{
+		// Initialize pawns attacks:
+		pawn_attacks[white][square] = mask_pawn_attacks(white, square);
+		pawn_attacks[black][square] = mask_pawn_attacks(black, square);
+
+	}
 }
 
 /******************************************************************************\
@@ -75,15 +145,12 @@ void print_bitboard(U64 bitboard)
 
 int main()
 {
-	// Defining the bitboard:
-	U64 bitboard = 0ULL;
-	// Adding some bits:
-	set_bit(bitboard, d2);
-	set_bit(bitboard, e2);
-	set_bit(bitboard, f2);
-	print_bitboard(bitboard);
-	// Removing some bits:
-	pop_bit(bitboard, e2);
-	print_bitboard(bitboard);
+	// Initialize leaper pieces attacks:
+	init_leapers_attacks();
+
+	// Loop over 64 board squares:
+	for (int square = 0; square < 64; square++)
+		print_bitboard(pawn_attacks[white][square]);
+	
 	return 0;
 }
