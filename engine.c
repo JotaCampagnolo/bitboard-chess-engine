@@ -393,20 +393,33 @@ U64 set_occupancy(int index, int bits_in_mask, U64 attack_mask)
 ================================= MAIN DRIVER ==================================
 \******************************************************************************/
 
+// Pseudo random number state:
+unsigned int state = 1804289383;
+
+// Generate 32-bit pseudo legal numbers:
+unsigned int get_random_number()
+{
+	// Get current state:
+	unsigned int number = state;
+	// XOR shift algorithm:
+	number ^= number << 13;
+	number ^= number >> 17;
+	number ^= number << 5;
+	// Update the random number state:
+	state = number;
+	// Return the random number:
+	return number;
+}
+
 int main()
 {
 	// Initialize leaper pieces attacks:
 	init_leapers_attacks();
 
-	for (int rank = 0; rank < 8; rank++) 
-	{
-		for (int file = 0; file < 8; file++)
-		{
-			int square = rank * 8 + file;
-			printf("%d, ", count_bits(mask_rook_attacks(square)));
-		}
-		printf("\n");
-	}
+	printf("%ud\n", get_random_number());
+	printf("%ud\n", get_random_number());
+	printf("%ud\n", get_random_number());
+	printf("%ud\n", get_random_number());
 
 	return 0;
 }
