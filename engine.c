@@ -346,6 +346,27 @@ void init_leapers_attacks()
 	}
 }
 
+// Set occupancies:
+U64 set_occupancy(int index, int bits_in_mask, U64 attack_mask)
+{
+	// Occupancy map:
+	U64 occupancy = 0ULL;
+	// Loop over the range of bits within attack mask:
+	for (int count = 0; count < bits_in_mask; count++)
+	{
+		// Get LS1B index of attack mask:
+		int square = get_ls1b_index(attack_mask);
+		// Pop LS1B in attack mask:
+		pop_bit(attack_mask, square);
+		// Make sure that ocuupancy is on board:
+		if (index & (1 << count))
+			// Populare occupancy map:
+			occupancy |= (1ULL << square);
+	}
+	// Return occupancy map:
+	return occupancy;
+}
+
 /******************************************************************************\
 ================================= MAIN DRIVER ==================================
 \******************************************************************************/
@@ -354,13 +375,13 @@ int main()
 {
 	// Initialize leaper pieces attacks:
 	init_leapers_attacks();
-	// Initialize occupancy bitboard:
-	U64 block = 0ULL;
-	set_bit(block, d7);
-	set_bit(block, d2);
-	set_bit(block, g4);
-	print_bitboard(block);
-	printf("Index: %d\nCoordinate: %s\n", get_ls1b_index(block), square_to_coordinates[get_ls1b_index(block)]);
+	
+	// Mask piece attack at given square:
+	U64 attack_mask = mask_rook_attacks(a1);
+
+	// Initalizate occupancy:
+	U64 occupancy = set_occupancy(4095, count_bits(attack_mask), attack_mask);
+	print_bitboard(occupancy);
 
 	return 0;
 }
