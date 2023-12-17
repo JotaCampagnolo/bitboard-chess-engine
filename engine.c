@@ -26,6 +26,9 @@ enum
 	a1, b1, c1, d1, e1, f1, g1, h1
 };
 
+// Enumerate sides to move (colors):
+enum { white, black };
+
 const char *square_to_coordinates[] = {
 	"a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
 	"a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
@@ -37,8 +40,47 @@ const char *square_to_coordinates[] = {
 	"a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1"
 };
 
-// Enumerate sides to move (colors):
-enum { white, black };
+/******************************************************************************\
+=============================== RANDOM NUMBERS =================================
+\******************************************************************************/
+
+// Pseudo random number state:
+unsigned int state = 1804289383;
+
+// Generate 32-bit pseudo legal numbers:
+unsigned int get_random_U32_number()
+{
+	// Get current state:
+	unsigned int number = state;
+	// XOR shift algorithm:
+	number ^= number << 13;
+	number ^= number >> 17;
+	number ^= number << 5;
+	// Update the random number state:
+	state = number;
+	// Return the random number:
+	return number;
+}
+
+// Generate 64-bit pseudo legal numbers:
+U64 get_random_U64_number()
+{
+	// Define 4 random numbers:
+	U64 n1, n2, n3, n4;
+	// Initialize random numbers slicing 16 bits from MS1B side:
+	n1 = (U64) (get_random_U32_number() & 0xFFFF);
+	n2 = (U64) (get_random_U32_number() & 0xFFFF);
+	n3 = (U64) (get_random_U32_number() & 0xFFFF);
+	n4 = (U64) (get_random_U32_number() & 0xFFFF);
+	// Return the random number:
+	return n1 | (n2 << 16) | (n3 << 32) | (n4 << 48);
+}
+
+// Generate magic number candidate:
+U64 generate_magic_number()
+{
+	return get_random_U64_number() & get_random_U64_number() & get_random_U64_number();
+}
 
 /******************************************************************************\
 ============================== BIT MANIPULATION ================================
@@ -393,33 +435,12 @@ U64 set_occupancy(int index, int bits_in_mask, U64 attack_mask)
 ================================= MAIN DRIVER ==================================
 \******************************************************************************/
 
-// Pseudo random number state:
-unsigned int state = 1804289383;
-
-// Generate 32-bit pseudo legal numbers:
-unsigned int get_random_number()
-{
-	// Get current state:
-	unsigned int number = state;
-	// XOR shift algorithm:
-	number ^= number << 13;
-	number ^= number >> 17;
-	number ^= number << 5;
-	// Update the random number state:
-	state = number;
-	// Return the random number:
-	return number;
-}
-
 int main()
 {
 	// Initialize leaper pieces attacks:
 	init_leapers_attacks();
 
-	printf("%ud\n", get_random_number());
-	printf("%ud\n", get_random_number());
-	printf("%ud\n", get_random_number());
-	printf("%ud\n", get_random_number());
+	print_bitboard(generate_magic_number());
 
 	return 0;
 }
