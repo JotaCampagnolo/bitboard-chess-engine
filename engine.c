@@ -133,7 +133,7 @@ U64 bitboards[12];
 U64 occupancies[3];
 
 // Side to move:
-int side = -1;
+int side;
 
 // Enpassant square:
 int enpassant = no_sq;
@@ -241,6 +241,10 @@ static inline int get_ls1b_index(U64 bitboard)
 	}
 }
 
+/******************************************************************************\
+============================== INPUT AND OUTPUT ================================
+\******************************************************************************/
+
 // Printing bitboard:
 void print_bitboard(U64 bitboard)
 {
@@ -273,6 +277,132 @@ void print_bitboard(U64 bitboard)
 	printf("+---------------------------------------+\n\n");
 	// Print the bitboard as unsigned decimal number:
 	printf("\e[0mBitboard state: %llu\n\n", bitboard);
+}
+
+// Print board:
+void print_board()
+{
+  // Print horizontal top border:
+	printf("\n");
+	printf("\033[0;30m+---------------------------------------+\n");
+	if (side == white)
+	{
+		printf("|            \033[0;33m=> WHITE TURN <=\033[0;30m           |\n");
+	}
+	else if (side == black)
+	{
+		printf("|            \033[0;34m=> BLACK TURN <=\033[0;30m           |\n");
+	}
+	else
+	{
+		printf("|                                       |\n");
+	}
+	// Print top horizontal separador:
+	printf("|   +-");
+	(castle & bq) ? printf("\033[0;32m%c\033[0;30m", '@') : printf("%c", '-');
+	printf("-+---+---+---+---+---+---+-");
+	(castle & bk) ? printf("\033[0;32m%c\033[0;30m", '@') : printf("%c", '-');
+	printf("-+   |\n");
+	// Loop over board ranks:
+	for (int rank = 0; rank < 8; rank++)
+	{
+		// Print horizontal separator:
+		if (rank > 0)
+		{
+			printf("|   ");
+			for (int file = 0; file < 8; file++)
+			{
+				if (enpassant != no_sq && (enpassant == ((rank * 8) + file) || enpassant == (((rank - 1) * 8) + file)))
+				{
+					printf("\033[0;31m+---");
+				}
+				else if (enpassant != no_sq && ((enpassant + 1 == ((rank * 8) + file) && ((enpassant + 1) % 8 > 0)) || (enpassant + 1 == (((rank - 1) * 8) + file) && ((enpassant + 1) % 8 > 0))))
+				{
+					printf("\033[0;31m+\033[0;30m---");
+				}
+				else
+				{
+					printf("\033[0;30m+---");
+				}
+			}
+			printf("+\033[0;30m   |\n");
+		}
+		// Loop over board files:
+		for (int file = 0; file < 8; file++)
+		{
+			// Convert the file and rank into square index:
+			int square = rank * 8 + file;
+      // Set the print square color character:
+      char square_color = (square + rank) % 2 == 0 ? ' ' : ':';
+      char square_empty = (square + rank) % 2 == 0 ? ' ' : ':';
+      int piece_color = white;
+      // Defining the piece to print:
+      int piece = -1;
+      // Loop over all 12 pieces bitboards:
+      for (int bb_piece = P; bb_piece <= k; bb_piece++)
+      {
+        if (get_bit(bitboards[bb_piece], square))
+        {
+          piece = bb_piece;
+          if(bb_piece >= p)
+          {
+            piece_color = black;
+          }
+        }
+      }
+			// Print rank label:
+			if (!file)
+			{
+				if (enpassant % 8 == 0 && square == enpassant)
+				{
+					printf("| \e[0m%1d\033[0;31m |\033[0;30m", 8 - rank);
+				}
+				else
+				{
+					printf("| \e[0m%1d\033[0;30m |", 8 - rank);
+				}
+			}
+			// Print the piece depending on the OS:
+			#ifdef WIN64
+				if (piece_color == white)
+				{
+			  	piece != -1 ? printf("%c\033[0;33m%c\033[0;30m%c", square_color, ascii_pieces[piece], square_color) : printf("%c%c%c\033[0;30m", square_color, square_empty, square_color);
+				}
+				else
+				{
+			  	piece != -1 ? printf("%c\033[0;34m%c\033[0;30m%c", square_color, ascii_pieces[piece], square_color) : printf("%c%c%c\033[0;30m", square_color, square_empty, square_color);
+				}
+      #else
+				if (piece_color == white)
+				{
+			  	piece != -1 ? printf("%c\033[0;33m%s\033[0;30m%c", square_color, unicode_pieces[piece], square_color) : printf("%c%c%c\033[0;30m", square_color, square_empty, square_color);
+				}
+				else
+				{
+			  	piece != -1 ? printf("%c\033[0;34m%s\033[0;30m%c", square_color, unicode_pieces[piece], square_color) : printf("%c%c%c\033[0;30m", square_color, square_empty, square_color);
+				}
+      #endif
+			if (enpassant != no_sq && (enpassant == (square) || (enpassant == (square + 1) && (square + 1) % 8 != 0)))
+			{
+				printf("\033[0;31m|\033[0;30m");
+			}
+			else
+			{
+				printf("|");
+			}
+			if (file == 7) printf("   |");
+		}
+		// Print a new line after every rank:
+		printf("\n");
+	}
+	// Print horizontal bottom border:
+	printf("|   +-");
+	(castle & wq) ? printf("\033[0;32m%c\033[0;30m", '@') : printf("%c", '-');
+	printf("-+---+---+---+---+---+---+-");
+	(castle & wk) ? printf("\033[0;32m%c\033[0;30m", '@') : printf("%c", '-');
+	printf("-+   |\n");
+	printf("|     \e[0ma   b   c   d   e   f   g   h\033[0;30m     |\n");
+	printf("+---------------------------------------+\n\n");
 }
 
 /******************************************************************************\
@@ -876,18 +1006,47 @@ int main()
 {
 	// Initialize all variables:
 	init_all();
-	
-  // Testing:
-  set_bit(bitboards[P], e2);
-  print_bitboard(bitboards[P]);
-  #ifdef WIN64
-    printf("ASCII piece: %c\n", ascii_pieces[P]);
-    printf("Char piece: %c\n", ascii_pieces[char_pieces['K']]);
-  #else
-    printf("Unicode piece: %s\n", unicode_pieces[P]);
-    printf("Char piece: %s\n", unicode_pieces[char_pieces['K']]);
-  #endif
-
+  // Seting white pieces:
+  set_bit(bitboards[P], a2);
+  set_bit(bitboards[P], b2);
+  set_bit(bitboards[P], c2);
+  set_bit(bitboards[P], d2);
+  set_bit(bitboards[P], e4);
+  set_bit(bitboards[P], f2);
+  set_bit(bitboards[P], g2);
+  set_bit(bitboards[P], h2);
+  set_bit(bitboards[R], a1);
+  set_bit(bitboards[R], h1);
+  set_bit(bitboards[N], b1);
+  set_bit(bitboards[N], g1);
+  set_bit(bitboards[B], c1);
+  set_bit(bitboards[B], f1);
+  set_bit(bitboards[Q], d1);
+  set_bit(bitboards[K], e1);
+  // Seting black pieces:
+  set_bit(bitboards[p], a7);
+  set_bit(bitboards[p], b7);
+  set_bit(bitboards[p], c7);
+  set_bit(bitboards[p], d7);
+  set_bit(bitboards[p], e7);
+  set_bit(bitboards[p], f7);
+  set_bit(bitboards[p], g7);
+  set_bit(bitboards[p], h7);
+  set_bit(bitboards[r], a8);
+  set_bit(bitboards[r], h8);
+  set_bit(bitboards[n], b8);
+  set_bit(bitboards[n], g8);
+  set_bit(bitboards[b], c8);
+  set_bit(bitboards[b], f8);
+  set_bit(bitboards[q], d8);
+  set_bit(bitboards[k], e8);
+  // Printing the board:
+	castle |= wk;
+	castle |= wq;
+	castle |= bk;
+	castle |= bq;
+	enpassant = e3;
+  print_board();
 	// Return:
 	return 0;
 }
