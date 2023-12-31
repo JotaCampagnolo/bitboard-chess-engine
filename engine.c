@@ -1149,6 +1149,68 @@ void init_all()
 	*/
 }
 
+// Is a current given square being attacked by a current given side:
+static inline int is_square_attacked(int square, int side)
+{
+	// Attacked by white pawns:
+	if ((side == white) && (pawn_attacks[black][square] & bitboards[P])) return 1;
+	// Attacked by black pawns:
+	if ((side == black) && (pawn_attacks[white][square] & bitboards[p])) return 1;
+	// Attacked by knights:
+	if (knight_attacks[square] & ((side == white) ? bitboards[N] : bitboards[n])) return 1;
+	// Attacked by bishops:
+	if (get_bishop_attacks(square, occupancies[both]) & ((side == white) ? bitboards[B] : bitboards[b])) return 1;
+	// Attacked by rooks:
+	if (get_rook_attacks(square, occupancies[both]) & ((side == white) ? bitboards[R] : bitboards[r])) return 1;
+	// Attacked by queens:
+	if (get_queen_attacks(square, occupancies[both]) & ((side == white) ? bitboards[Q] : bitboards[q])) return 1;
+	// Attacked by kings:
+	if (king_attacks[square] & ((side == white) ? bitboards[K] : bitboards[k])) return 1;
+	// By default return false:
+	return 0;
+}
+
+// Print attacked squares:
+void print_attacked_squares(int side)
+{
+	// Print horizontal top border:
+	printf("\n");
+	printf("\033[0;30m+---------------------------------------+\n");
+	if (side)
+	{
+		printf("|       SQUARES ATTACKED BY \033[0;34mBLACK\033[0;30m       |\n");
+	}
+	else
+	{
+		printf("|       SQUARES ATTACKED BY \033[0;33mWHITE\033[0;30m       |\n");
+	}
+	// Loop over board ranks:
+	for (int rank = 0; rank < 8; rank++)
+	{
+		// Print horizontal separator:
+		printf("|   +---+---+---+---+---+---+---+---+   |\n");
+		// Loop over board files:
+		for (int file = 0; file < 8; file++)
+		{
+			// Convert the file and rank into square index:
+			int square = rank * 8 + file;
+			// Print rank label:
+			if (!file) printf("| \e[0m%1d\033[0;30m |", 8 - rank);
+			// Check wheter current square is attacked or not:
+			is_square_attacked(square, side) ? printf(" \033[0;31m%s\033[0;30m |", "⚔") : printf(" %d\033[0;30m |", 0);
+			if (file == 7) printf("   |");
+		}
+		// Print a new line after every rank:
+		printf("\n");
+	}
+	// Print horizontal bottom border:
+	printf("|   +---+---+---+---+---+---+---+---+   |\n");
+	printf("|     \e[0ma   b   c   d   e   f   g   h\033[0;30m     |\n");
+	printf("+---------------------------------------+\n\n");
+	// Print the bitboard as unsigned decimal number:
+	// printf("\e[0mBitboard state: %llu\n\n", bitboard);
+}
+
 /******************************************************************************\
 ================================= MAIN DRIVER ==================================
 \******************************************************************************/
@@ -1157,15 +1219,10 @@ int main()
 {
 	// Initialize all variables:
 	init_all();
-
-	// Initialize occupancy bitboard:
-	U64 occupancy = 0ULL;
-	// Set occupancy bits:
-	set_bit(occupancy, e3);
-	set_bit(occupancy, d7);
-	// Get queen attacks:
-	print_bitboard(get_queen_attacks(d4, occupancy));
-
+	// Parse custom FEN string:
+	parse_fen(tricky_position);
+	print_board();
+	print_attacked_squares(white);
 	// Return:
 	return 0;
 }
