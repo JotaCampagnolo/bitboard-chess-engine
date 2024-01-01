@@ -258,7 +258,7 @@ void print_bitboard(U64 bitboard)
 	// Print horizontal top border:
 	printf("\n");
 	printf("\033[0;30m+---------------------------------------+\n");
-	printf("|                                       |\n");
+	printf("|        \e[0mBITBOARD REPRESENTATION\033[0;30m        |\n");
 	// Loop over board ranks:
 	for (int rank = 0; rank < 8; rank++)
 	{
@@ -283,7 +283,7 @@ void print_bitboard(U64 bitboard)
 	printf("|     \e[0ma   b   c   d   e   f   g   h\033[0;30m     |\n");
 	printf("+---------------------------------------+\n\n");
 	// Print the bitboard as unsigned decimal number:
-	printf("\e[0mBitboard state: %llu\n\n", bitboard);
+	printf("\033[0;30m→ \e[0mBitboard state: \033[0;30m%llu\e[0m\n\n", bitboard);
 }
 
 // Print board:
@@ -438,7 +438,7 @@ void parse_fen(char *fen)
 				// Set piece on corresponding bitboard:
 				set_bit(bitboards[piece], square);
 				// Increment pointer to FEN string:
-				*fen++;
+				fen++;
 			}
 			// Match empty squares numbers within FEN string:
 			if (*fen >= '0' && *fen <= '9')
@@ -467,18 +467,18 @@ void parse_fen(char *fen)
 				// Adjust file counter:
 				file += offset;
 				// Increment pointer to FEN string:
-				*fen++;
+				fen++;
 			}
 			// Match rank separator:
 			if (*fen == '/')
 			{
 				// Increment pointer to FEN string:
-				*fen++;
+				fen++;
 			}
 		}
 	}
 	// Increment pointer to FEN string to go direct to side to move:
-	*fen++;
+	fen++;
 	// Parse side to move:
 	(*fen == 'w') ? (side = white) : (side = black);
 	// Increment pointer to FEN string to go direct to castling rights:
@@ -496,10 +496,10 @@ void parse_fen(char *fen)
 			case '-': break;
 		}
 		// Increment pointer to FEN string:
-		*fen++;	
+		fen++;	
 	}
 	// Increment pointer to FEN string to go direct to enpassant square:
-	*fen++;
+	fen++;
 	// Parse enpassant square:
 	if (*fen != '-')
 	{
@@ -1131,23 +1131,8 @@ static inline U64 get_queen_attacks(int square, U64 occupancy)
 }
 
 /******************************************************************************\
-=============================== INITIALIZE ALL =================================
+=============================== MOVE GENERATOR =================================
 \******************************************************************************/
-
-// Initialize all variables:
-void init_all()
-{
-	// Initialize leaper pieces attacks:
-	init_leapers_attacks();
-	// Initialize sliders pieces attacks:
-	init_sliders_attacks(bishop);
-	init_sliders_attacks(rook);
-	/*
-	// Initialize magic numbers:
-	init_magic_numbers();
-	print_magic_numbers();
-	*/
-}
 
 // Is a current given square being attacked by a current given side:
 static inline int is_square_attacked(int square, int side)
@@ -1211,6 +1196,55 @@ void print_attacked_squares(int side)
 	// printf("\e[0mBitboard state: %llu\n\n", bitboard);
 }
 
+// Generate all moves:
+static inline void generate_moves()
+{
+	// Define source and target squares:
+	int source_square, target_square;
+	// Define current pieces bitboard copy and its attacks:
+	U64 bitboard, attacks;
+	// Loop over all the bitboards:
+	for (int piece = P; piece <= k; piece++)
+	{
+		// Initializate piece bitboard copy:
+		bitboard = bitboards[piece];
+		// Generate white pawns and white king castling moves:
+		if (side == white)
+		{
+
+		}
+		// Generate black pawns and black king castling moves:
+		else
+		{
+
+		}
+		// Generate knight moves:
+		// Generate bishop moves:
+		// Generate rook moves:
+		// Generate queen moves:
+		// Generate king moves:
+	}
+}
+
+/******************************************************************************\
+=============================== INITIALIZE ALL =================================
+\******************************************************************************/
+
+// Initialize all variables:
+void init_all()
+{
+	// Initialize leaper pieces attacks:
+	init_leapers_attacks();
+	// Initialize sliders pieces attacks:
+	init_sliders_attacks(bishop);
+	init_sliders_attacks(rook);
+	/*
+	// Initialize magic numbers:
+	init_magic_numbers();
+	print_magic_numbers();
+	*/
+}
+
 /******************************************************************************\
 ================================= MAIN DRIVER ==================================
 \******************************************************************************/
@@ -1223,6 +1257,7 @@ int main()
 	parse_fen(tricky_position);
 	print_board();
 	print_attacked_squares(white);
+	print_bitboard(occupancies[both]);
 	// Return:
 	return 0;
 }
