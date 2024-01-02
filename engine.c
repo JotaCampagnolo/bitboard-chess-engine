@@ -1211,12 +1211,82 @@ static inline void generate_moves()
 		// Generate white pawns and white king castling moves:
 		if (side == white)
 		{
-
+			// Select white pawns bitboard index:
+			if (piece == P)
+			{
+				// Loop over white pawns within white pawns bitboard:
+				while (bitboard)
+				{
+					// Initialize source square:
+					source_square = get_ls1b_index(bitboard);
+					// Initialize target square:
+					target_square = source_square - 8;
+					// Generate quiet pawn moves:
+					if (!(target_square < a8) && !get_bit(occupancies[both], target_square))
+					{
+						// Pawn promotion:
+						if (source_square >= a7 && source_square <= h7)
+						{
+							printf("pawn promotion: %s%sQ\n", square_to_coordinates[source_square], square_to_coordinates[target_square]);
+							printf("pawn promotion: %s%sR\n", square_to_coordinates[source_square], square_to_coordinates[target_square]);
+							printf("pawn promotion: %s%sB\n", square_to_coordinates[source_square], square_to_coordinates[target_square]);
+							printf("pawn promotion: %s%sN\n", square_to_coordinates[source_square], square_to_coordinates[target_square]);
+						}
+						else
+						{
+							// One square pawn move:
+							printf("pawn: %s%s\n", square_to_coordinates[source_square], square_to_coordinates[target_square]);
+							// Two squares pawn move:
+							if ((source_square >= a2 && source_square <= h2) && !get_bit(occupancies[both], target_square - 8))
+							{
+								printf("pawn rush: %s%s\n", square_to_coordinates[source_square], square_to_coordinates[target_square - 8]);
+							}
+						}
+					}
+					// Pop LS1B from piece bitboard copy:
+					pop_bit(bitboard, source_square);
+				}
+			}
 		}
 		// Generate black pawns and black king castling moves:
 		else
 		{
-
+			// Select black pawns bitboard index:
+			if (piece == p)
+			{
+				// Loop over black pawns within black pawns bitboard:
+				while (bitboard)
+				{
+					// Initialize source square:
+					source_square = get_ls1b_index(bitboard);
+					// Initialize target square:
+					target_square = source_square + 8;
+					// Generate quiet pawn moves:
+					if (!(target_square > h1) && !get_bit(occupancies[both], target_square))
+					{
+						// Pawn promotion:
+						if (source_square >= a2 && source_square <= h2)
+						{
+							printf("pawn promotion: %s%sQ\n", square_to_coordinates[source_square], square_to_coordinates[target_square]);
+							printf("pawn promotion: %s%sR\n", square_to_coordinates[source_square], square_to_coordinates[target_square]);
+							printf("pawn promotion: %s%sB\n", square_to_coordinates[source_square], square_to_coordinates[target_square]);
+							printf("pawn promotion: %s%sN\n", square_to_coordinates[source_square], square_to_coordinates[target_square]);
+						}
+						else
+						{
+							// One square pawn move:
+							printf("pawn: %s%s\n", square_to_coordinates[source_square], square_to_coordinates[target_square]);
+							// Two squares pawn move:
+							if ((source_square >= a7 && source_square <= h7) && !get_bit(occupancies[both], target_square + 8))
+							{
+								printf("pawn rush: %s%s\n", square_to_coordinates[source_square], square_to_coordinates[target_square + 8]);
+							}
+						}
+					}
+					// Pop LS1B from piece bitboard copy:
+					pop_bit(bitboard, source_square);
+				}
+			}
 		}
 		// Generate knight moves:
 		// Generate bishop moves:
@@ -1254,10 +1324,10 @@ int main()
 	// Initialize all variables:
 	init_all();
 	// Parse custom FEN string:
-	parse_fen(tricky_position);
+	parse_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 0 1 ");
 	print_board();
-	print_attacked_squares(white);
-	print_bitboard(occupancies[both]);
+	// Generate moves:
+	generate_moves();
 	// Return:
 	return 0;
 }
