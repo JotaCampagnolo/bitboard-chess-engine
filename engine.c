@@ -1283,6 +1283,36 @@ static inline void generate_moves()
 					pop_bit(bitboard, source_square);
 				}
 			}
+			// Castling moves:
+			if (piece == K)
+			{
+				// King side castling is available:
+				if (castle & wk)
+				{
+					// Make sure the squares betwen king and kings rook are empty:
+					if (!get_bit(occupancies[both], f1) && !get_bit(occupancies[both], g1))
+					{
+						// Make sure that king and destination square are not under attack:
+						if (!is_square_attacked(e1, black) && !is_square_attacked(f1, black))
+						{
+							printf("castling move: e1g1\n");
+						}
+					}
+				}
+				// Queen side castling is available:
+				if (castle & wq)
+				{
+					// Make sure the squares betwen king and queens rook are empty:
+					if (!get_bit(occupancies[both], d1) && !get_bit(occupancies[both], c1) && !get_bit(occupancies[both], b1))
+					{
+						// Make sure that king and destination square are not under attack:
+						if (!is_square_attacked(e1, black) && !is_square_attacked(d1, black))
+						{
+							printf("castling move: e1c1\n");
+						}
+					}
+				}
+			}
 		}
 		// Generate black pawns and black king castling moves:
 		else
@@ -1359,6 +1389,36 @@ static inline void generate_moves()
 					pop_bit(bitboard, source_square);
 				}
 			}
+			// Castling moves:
+			if (piece == k)
+			{
+				// King side castling is available:
+				if (castle & bk)
+				{
+					// Make sure the squares betwen king and kings rook are empty:
+					if (!get_bit(occupancies[both], f8) && !get_bit(occupancies[both], g8))
+					{
+						// Make sure that king and destination square are not under attack:
+						if (!is_square_attacked(e8, white) && !is_square_attacked(f8, white))
+						{
+							printf("castling move: e8g8\n");
+						}
+					}
+				}
+				// Queen side castling is available:
+				if (castle & bq)
+				{
+					// Make sure the squares betwen king and queens rook are empty:
+					if (!get_bit(occupancies[both], d8) && !get_bit(occupancies[both], c8) && !get_bit(occupancies[both], b8))
+					{
+						// Make sure that king and destination square are not under attack:
+						if (!is_square_attacked(e8, white) && !is_square_attacked(d8, white))
+						{
+							printf("castling move: e8c8\n");
+						}
+					}
+				}
+			}
 		}
 		// Generate knight moves:
 		// Generate bishop moves:
@@ -1396,7 +1456,7 @@ int main()
 	// Initialize all variables:
 	init_all();
 	// Parse custom FEN string:
-	parse_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPpP/R3K2R b KQkq a3 0 1 ");
+	parse_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 0 1 ");
 	print_board();
 	// Generate moves:
 	generate_moves();
