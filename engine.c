@@ -1621,25 +1621,47 @@ void init_all()
 	castling flag		→ 1000 0000 0000 0000 0000 0000		→ 0x800000
 */
 
+// Encode move:
+#define encode_move(source, target, piece, promoted, capture, double, enpassant, castling) \
+	(source) |			\
+	(target << 6) |		\
+	(piece << 12) |		\
+	(promoted << 16) |	\
+	(capture << 20) |	\
+	(double << 21) |	\
+	(enpassant << 22) |	\
+	(castling << 23)	\
+
+// Extract move properties:
+#define get_move_source(move) (move & 0x3f)
+#define get_move_target(move) ((move & 0xfc0) >> 6)
+#define get_move_piece(move) ((move & 0xf000) >> 12)
+#define get_move_promoted(move) ((move & 0xf0000) >> 16)
+#define get_move_capture(move) (move & 0x100000)
+#define get_move_double(move) (move & 0x200000)
+#define get_move_enpassant(move) (move & 0x400000)
+#define get_move_castling(move) (move & 0x800000)
+
 int main()
 {
 	// Initialize all variables:
 	init_all();
-	// Parse custom FEN string:
-	parse_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ");
-	print_board();
-	// Generate moves:
-	generate_moves();
 	// Create move:
-	int move = 0;
-	// Encode target square of h1:
-	move = (move | 63) << 6;
-	// Print move in binary:
-	print_bitboard(move);
-	// Extract target square from move:
-	int target_square = (move & 0xfc0) >> 6;
+	int move = encode_move(e7, f8, P, Q, 1, 0, 0, 0);
+	// Extract move items:
+	int source_square = get_move_source(move);
+	int target_square = get_move_target(move);
+	int piece = get_move_piece(move);
+	int promoted = get_move_promoted(move);
 	// Print the target square:
-	printf("Target square: %d → %s\n", target_square, square_to_coordinates[target_square]);
+	printf("Move source: %d → %s\n", source_square, square_to_coordinates[source_square]);
+	printf("Move target: %d → %s\n", target_square, square_to_coordinates[target_square]);
+	printf("Move piece: %d → %s\n", piece, unicode_pieces[piece]);
+	printf("Move promoted: %d → %s\n", promoted, unicode_pieces[promoted]);
+	printf("Move capture: %s\n", get_move_capture(move) ? "Yes" : "No");
+	printf("Move double: %s\n", get_move_double(move) ? "Yes" : "No");
+	printf("Move enpassant: %s\n", get_move_enpassant(move) ? "Yes" : "No");
+	printf("Move castling: %s\n", get_move_castling(move) ? "Yes" : "No");
 	// Return:
 	return 0;
 }
