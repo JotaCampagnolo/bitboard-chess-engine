@@ -1606,6 +1606,20 @@ void init_all()
 ================================= MAIN DRIVER ==================================
 \******************************************************************************/
 
+/*
+
+	Binary						  → Bits type		  → Hexadecimal
+
+	0000 0000 0000 0000 0011 1111 → source square	  → 0x3f
+	0000 0000 0000 1111 1100 0000 → target square	  → 0xfc0
+	0000 0000 1111 0000 0000 0000 → piece			  → 0xf000
+	0000 1111 0000 0000 0000 0000 → promoted piece	  → 0xf0000
+	0001 0000 0000 0000 0000 0000 → capture flag	  → 0x100000
+	0010 0000 0000 0000 0000 0000 → double push flag  → 0x200000
+	0100 0000 0000 0000 0000 0000 → enpassant flag	  → 0x400000
+	1000 0000 0000 0000 0000 0000 → castling flag	  → 0x800000
+*/
+
 int main()
 {
 	// Initialize all variables:
@@ -1615,6 +1629,16 @@ int main()
 	print_board();
 	// Generate moves:
 	generate_moves();
+	// Create move:
+	int move = 0;
+	// Encode target square of h1:
+	move = (move | 63) << 6;
+	// Print move in binary:
+	print_bitboard(move);
+	// Extract target square from move:
+	int target_square = (move & 0xfc0) >> 6;
+	// Print the target square:
+	printf("Target square: %d → %s\n", target_square, square_to_coordinates[target_square]);
 	// Return:
 	return 0;
 }
