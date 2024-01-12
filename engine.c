@@ -15,7 +15,7 @@
 #define U64 unsigned long long
 
 // Defining FEN debug positions:
-#define empty_board "8/8/8/8/8/8/8/8 w - - "
+#define empty_board "8/8/8/8/8/8/8/8 b - - "
 #define start_position "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 "
 #define tricky_position "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 "
 #define killer_position "rnbqkb1r/pp1p1pPp/8/2p1pP2/1P1P4/3P3P/P1P1P3/RNBQKBNR w KQkq e6 0 1"
@@ -1305,6 +1305,20 @@ void print_move_list(moves *move_list)
 	printf("+-------------------------------------------------------------------+\n");
 }
 
+// Preserve board state:
+#define copy_board()														\
+	U64 bitboards_copy[12], occupancies_copy[3];							\
+	int side_copy, enpassant_copy, castle_copy;								\
+	memcpy(bitboards_copy, bitboards, 96);									\
+	memcpy(occupancies_copy, occupancies, 24);								\
+	side_copy = side, enpassant_copy = enpassant, castle_copy = castle;		\
+
+// Restore board state:
+#define restore_board()														\
+	memcpy(bitboards, bitboards_copy, 96);									\
+	memcpy(occupancies, occupancies_copy, 24);								\
+	side = side_copy, enpassant = enpassant_copy, castle = castle_copy;		\
+
 // Generate all moves:
 static inline void generate_moves(moves *move_list)
 {
@@ -1722,15 +1736,17 @@ int main()
 	// Initialize all variables:
 	init_all();
 	// Parse FEN:
-	parse_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ");
-	// Printing the board:
+	parse_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq c6 0 1 ");
 	print_board();
-	// Create move list:
-	moves move_list[1];
-	// Generate moves:
-	generate_moves(move_list);
-	// Print move list:
-	print_move_list(move_list);
+	// Preserve board state:
+	copy_board();
+	print_board();
+	// Parse FEN:
+	parse_fen(empty_board);
+	print_board();
+	// Restore board state:
+	restore_board();
+	print_board();
 	// Return:
 	return 0;
 }
