@@ -1476,15 +1476,15 @@ static inline int make_move(int move, int move_flag)
 		int target_square = get_move_target(move);
 		int piece = get_move_piece(move);
 		int promoted = get_move_promoted(move);
-		int capture = get_move_capture(move);
-		int double_push = get_move_double(move);
-		int enpassant = get_move_enpassant(move);
-		int castling = get_move_castling(move);
+		int capture_flag = get_move_capture(move);
+		int double_flag = get_move_double(move);
+		int enpassant_flag = get_move_enpassant(move);
+		int castling_flag = get_move_castling(move);
 		// Move the piece:
 		pop_bit(bitboards[piece], source_square);
 		set_bit(bitboards[piece], target_square);
 		// Handling capture moves:
-		if (capture)
+		if (capture_flag)
 		{
 			// Pick up bitboard piece index ranges depending on side:
 			int start_piece, end_piece;
@@ -1521,13 +1521,19 @@ static inline int make_move(int move, int move_flag)
 			set_bit(bitboards[promoted], target_square);
 		}
 		// Handling enpassant captures:
-		if (enpassant)
+		if (enpassant_flag)
 		{
 			// Erase the pawn depending on side to move:
 			(side == white) ? pop_bit(bitboards[p], target_square + 8) : pop_bit(bitboards[p], target_square - 8);
 		}
 		// Reseting the enpassant square:
 		enpassant = no_sq;
+		// Handling double pawn push:
+		if (double_flag)
+		{
+			// Set the enpassant square depending on side to move:
+			(side == white) ? (enpassant = target_square + 8) : (enpassant = target_square - 8);
+		}
 	}
 	// Capture moves:
 	else
