@@ -1534,6 +1534,38 @@ static inline int make_move(int move, int move_flag)
 			// Set the enpassant square depending on side to move:
 			(side == white) ? (enpassant = target_square + 8) : (enpassant = target_square - 8);
 		}
+		// Handling the castling moves:
+		if (castling_flag)
+		{
+			// Depending on king target square:
+			switch (target_square)
+			{
+				// White castles king side:
+				case (g1):
+					// Move the H rook:
+					pop_bit(bitboards[R], h1);
+					set_bit(bitboards[R], f1);
+					break;
+				// White castles queen side:
+				case (c1):
+					// Move the H rook:
+					pop_bit(bitboards[R], a1);
+					set_bit(bitboards[R], d1);
+					break;
+				// Black castles king side:
+				case (g8):
+					// Move the H rook:
+					pop_bit(bitboards[r], h8);
+					set_bit(bitboards[r], f8);
+					break;
+				// Black castles queen side:
+				case (c8):
+					// Move the H rook:
+					pop_bit(bitboards[r], a8);
+					set_bit(bitboards[r], d8);
+					break;
+			}
+		}
 	}
 	// Capture moves:
 	else
