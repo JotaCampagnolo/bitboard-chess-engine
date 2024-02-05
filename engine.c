@@ -1483,6 +1483,35 @@ static inline int make_move(int move, int move_flag)
 		// Move the piece:
 		pop_bit(bitboards[piece], source_square);
 		set_bit(bitboards[piece], target_square);
+		// Handling capture moves:
+		if (get_move_capture(move))
+		{
+			// Pick up bitboard piece index ranges depending on side:
+			int start_piece, end_piece;
+			// White to move:
+			if (side == white)
+			{
+				start_piece = p;
+				end_piece = k;
+			}
+			// Black to move:
+			else
+			{
+				start_piece = P;
+				end_piece = K;
+			}
+			// Loop over the bitboards of the opposite side to move:
+			for (int bb_piece = start_piece; bb_piece <= end_piece; bb_piece++)
+			{
+				// If there is a piece on the target square:
+				if (get_bit(bitboards[bb_piece], target_square))
+				{
+					// Pop the piece from the bitboard:
+					pop_bit(bitboards[bb_piece], target_square);
+					break;
+				}
+			}
+		}
 	}
 	// Capture moves:
 	else
