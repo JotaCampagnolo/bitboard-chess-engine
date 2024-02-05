@@ -1512,6 +1512,22 @@ static inline int make_move(int move, int move_flag)
 				}
 			}
 		}
+		// Handling pawn promotions:
+		if (promoted)
+		{
+			// Erase the pawn from the target square:
+			pop_bit(bitboards[(side == white) ? P : p], target_square);
+			// Set up promoted piece on chess board:
+			set_bit(bitboards[promoted], target_square);
+		}
+		// Handling enpassant captures:
+		if (enpassant)
+		{
+			// Erase the pawn depending on side to move:
+			(side == white) ? pop_bit(bitboards[p], target_square + 8) : pop_bit(bitboards[p], target_square - 8);
+		}
+		// Reseting the enpassant square:
+		enpassant = no_sq;
 	}
 	// Capture moves:
 	else
