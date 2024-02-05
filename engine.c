@@ -1463,6 +1463,34 @@ enum
 	only_captures
 };
 
+/*
+
+	 CR	    MU	   BIN  DEC  DESC
+
+	1111 & 1111 = 1111   15  King and rooks didnt move.
+
+	1111 & 1100 = 1100   12  White king moved.
+	1111 & 1110 = 1110   14  White kings rook moved.
+	1111 & 1101 = 1101   13  White queens rook moved.
+
+	1111 & 0011 = 0011    3  Black king moved.
+	1111 & 1011 = 1011   11  Black kings rook moved.
+	1111 & 0111 = 0111    7  Black queens rook moved.
+
+*/
+
+// Castling rights update constants:
+const int castling_rights[64] = {
+	7, 15, 15, 15, 3, 15, 15, 11,
+	15, 15, 15, 15, 15, 15, 15, 15,
+	15, 15, 15, 15, 15, 15, 15, 15,
+	15, 15, 15, 15, 15, 15, 15, 15,
+	15, 15, 15, 15, 15, 15, 15, 15,
+	15, 15, 15, 15, 15, 15, 15, 15,
+	15, 15, 15, 15, 15, 15, 15, 15,
+	13, 15, 15, 15, 12, 15, 15, 14
+};
+
 // Make move on chess board:
 static inline int make_move(int move, int move_flag)
 {
@@ -1566,6 +1594,9 @@ static inline int make_move(int move, int move_flag)
 					break;
 			}
 		}
+		// Update castling rights:
+		castle &= castling_rights[source_square];
+		castle &= castling_rights[target_square];
 	}
 	// Capture moves:
 	else
