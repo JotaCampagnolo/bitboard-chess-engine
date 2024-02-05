@@ -10,6 +10,11 @@
 // System headers:
 #include <stdio.h>
 #include <string.h>
+#ifdef WIN64
+#include <windows.h>
+#else
+#include <sys/time.h>
+#endif
 
 // Define bitboard data type:
 #define U64 unsigned long long
@@ -1481,15 +1486,14 @@ enum
 
 // Castling rights update constants:
 const int castling_rights[64] = {
-	7, 15, 15, 15, 3, 15, 15, 11,
-	15, 15, 15, 15, 15, 15, 15, 15,
-	15, 15, 15, 15, 15, 15, 15, 15,
-	15, 15, 15, 15, 15, 15, 15, 15,
-	15, 15, 15, 15, 15, 15, 15, 15,
-	15, 15, 15, 15, 15, 15, 15, 15,
-	15, 15, 15, 15, 15, 15, 15, 15,
-	13, 15, 15, 15, 12, 15, 15, 14
-};
+		7, 15, 15, 15, 3, 15, 15, 11,
+		15, 15, 15, 15, 15, 15, 15, 15,
+		15, 15, 15, 15, 15, 15, 15, 15,
+		15, 15, 15, 15, 15, 15, 15, 15,
+		15, 15, 15, 15, 15, 15, 15, 15,
+		15, 15, 15, 15, 15, 15, 15, 15,
+		15, 15, 15, 15, 15, 15, 15, 15,
+		13, 15, 15, 15, 12, 15, 15, 14};
 
 // Make move on chess board:
 static inline int make_move(int move, int move_flag)
@@ -1568,30 +1572,30 @@ static inline int make_move(int move, int move_flag)
 			// Depending on king target square:
 			switch (target_square)
 			{
-				// White castles king side:
-				case (g1):
-					// Move the H rook:
-					pop_bit(bitboards[R], h1);
-					set_bit(bitboards[R], f1);
-					break;
-				// White castles queen side:
-				case (c1):
-					// Move the H rook:
-					pop_bit(bitboards[R], a1);
-					set_bit(bitboards[R], d1);
-					break;
-				// Black castles king side:
-				case (g8):
-					// Move the H rook:
-					pop_bit(bitboards[r], h8);
-					set_bit(bitboards[r], f8);
-					break;
-				// Black castles queen side:
-				case (c8):
-					// Move the H rook:
-					pop_bit(bitboards[r], a8);
-					set_bit(bitboards[r], d8);
-					break;
+			// White castles king side:
+			case (g1):
+				// Move the H rook:
+				pop_bit(bitboards[R], h1);
+				set_bit(bitboards[R], f1);
+				break;
+			// White castles queen side:
+			case (c1):
+				// Move the H rook:
+				pop_bit(bitboards[R], a1);
+				set_bit(bitboards[R], d1);
+				break;
+			// Black castles king side:
+			case (g8):
+				// Move the H rook:
+				pop_bit(bitboards[r], h8);
+				set_bit(bitboards[r], f8);
+				break;
+			// Black castles queen side:
+			case (c8):
+				// Move the H rook:
+				pop_bit(bitboards[r], a8);
+				set_bit(bitboards[r], d8);
+				break;
 			}
 		}
 		// Update castling rights:
@@ -1612,7 +1616,7 @@ static inline int make_move(int move, int move_flag)
 			occupancies[black] |= bitboards[bb_piece];
 		}
 		// Update both sides occupancies:
-		occupancies[both] |= occupancies[white]; 
+		occupancies[both] |= occupancies[white];
 		occupancies[both] |= occupancies[black];
 		// Change side to move:
 		side ^= 1;
@@ -2058,6 +2062,18 @@ void init_all()
 ================================= MAIN DRIVER ==================================
 \******************************************************************************/
 
+// Get time in miliseconds:
+int get_time_ms()
+{
+#ifdef WIN64
+	return GetTickCount();
+#else
+	struct timeval time_value;
+	gettimeofday(&time_value, NULL);
+	return time_value.tv_sec * 1000 + time_value.tv_usec / 1000;
+#endif
+}
+
 int main()
 {
 	// Initialize all variables:
@@ -2069,6 +2085,8 @@ int main()
 	moves move_list[1];
 	// Generate moves:
 	generate_moves(move_list);
+	// Start tracking time:
+	int start = get_time_ms();
 	// Loop over generated moves:
 	for (int move_count = 0; move_count < move_list->count; move_count++)
 	{
@@ -2079,12 +2097,12 @@ int main()
 		// Make the move:
 		make_move(move, all_moves);
 		print_board();
-		getchar();
 		// Restore the board:
 		restore_board();
 		print_board();
-		getchar();
 	}
+	// Time taken to execute program:
+	printf("Time taken to execute: %dms\n", get_time_ms() - start);
 	// Return:
 	return 0;
 }
