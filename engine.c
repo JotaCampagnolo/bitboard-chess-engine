@@ -1597,6 +1597,23 @@ static inline int make_move(int move, int move_flag)
 		// Update castling rights:
 		castle &= castling_rights[source_square];
 		castle &= castling_rights[target_square];
+		// Reset occupancies:
+		memset(occupancies, 0ULL, 24);
+		// Loop over white pieces bitboards:
+		for (int bb_piece = P; bb_piece <= K; bb_piece++)
+		{
+			// Update white occupancies:
+			occupancies[white] |= bitboards[bb_piece];
+		}
+		// Loop over black pieces bitboards:
+		for (int bb_piece = p; bb_piece <= k; bb_piece++)
+		{
+			// Update black occupancies:
+			occupancies[black] |= bitboards[bb_piece];
+		}
+		// Update both sides occupancies:
+		occupancies[both] |= occupancies[white]; 
+		occupancies[both] |= occupancies[black]; 
 	}
 	// Capture moves:
 	else
