@@ -1484,7 +1484,7 @@ static inline int make_move(int move, int move_flag)
 		pop_bit(bitboards[piece], source_square);
 		set_bit(bitboards[piece], target_square);
 		// Handling capture moves:
-		if (get_move_capture(move))
+		if (capture)
 		{
 			// Pick up bitboard piece index ranges depending on side:
 			int start_piece, end_piece;
