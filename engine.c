@@ -1613,7 +1613,22 @@ static inline int make_move(int move, int move_flag)
 		}
 		// Update both sides occupancies:
 		occupancies[both] |= occupancies[white]; 
-		occupancies[both] |= occupancies[black]; 
+		occupancies[both] |= occupancies[black];
+		// Change side to move:
+		side ^= 1;
+		// Make sure that the king was not exposed to a check:
+		if (is_square_attacked((side == white) ? get_ls1b_index(bitboards[k]) : get_ls1b_index(bitboards[K]), side))
+		{
+			// Move is illegal, take it back:
+			restore_board();
+			// Return illegal move:
+			return 0;
+		}
+		else
+		{
+			// Return legal move:
+			return 1;
+		}
 	}
 	// Capture moves:
 	else
