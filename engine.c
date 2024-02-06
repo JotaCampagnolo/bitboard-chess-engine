@@ -2074,35 +2074,53 @@ int get_time_ms()
 #endif
 }
 
+// Leaf nodes (number of positions reached during the test of the moves generator at a given depth):
+long nodes;
+
+// PERFT driver:
+static inline void perft_driver(int depth)
+{
+	// Recursion scape condition:
+	if (depth == 0)
+	{
+		// increments nodes count (count reached positions):
+		nodes++;
+		return;
+	}
+	// Create a move list instance:
+	moves move_list[1];
+	// Generate moves:
+	generate_moves(move_list);
+	// Loop over generated moves:
+	for (int move_count = 0; move_count < move_list->count; move_count++)
+	{
+		// Preserve board state:
+		copy_board();
+		// Make the move:
+		if (!make_move(move_list->moves[move_count], all_moves))
+		{
+			continue;
+		}
+		// Call PERFT driver recursively:
+		perft_driver(depth - 1);
+		// Restore the board:
+		restore_board();
+	}
+}
+
 int main()
 {
 	// Initialize all variables:
 	init_all();
 	// Parse FEN:
-	parse_fen(tricky_position);
+	parse_fen(start_position);
 	print_board();
-	// Create a move list instance:
-	moves move_list[1];
-	// Generate moves:
-	generate_moves(move_list);
 	// Start tracking time:
 	int start = get_time_ms();
-	// Loop over generated moves:
-	for (int move_count = 0; move_count < move_list->count; move_count++)
-	{
-		// Initializate move:
-		int move = move_list->moves[move_count];
-		// Preserve board state:
-		copy_board();
-		// Make the move:
-		make_move(move, all_moves);
-		print_board();
-		// Restore the board:
-		restore_board();
-		print_board();
-	}
+	// Running the PERFT driver:
+	perft_driver(6);
 	// Time taken to execute program:
-	printf("Time taken to execute: %dms\n", get_time_ms() - start);
+	printf("Wasted %dms to find %ld nodes.\n", get_time_ms() - start, nodes);
 	// Return:
 	return 0;
 }
