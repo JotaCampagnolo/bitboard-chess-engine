@@ -1407,7 +1407,17 @@ static inline void add_move(moves *move_list, int move)
 // Print move (for UCI purposes):
 void print_move(int move)
 {
-	printf("%s%s%c\n", square_to_coordinates[get_move_source(move)], square_to_coordinates[get_move_target(move)], promoted_pieces[get_move_promoted(move)]);
+	if (get_move_promoted(move))
+	{
+		printf("%s%s%c\n", square_to_coordinates[get_move_source(move)],
+					 square_to_coordinates[get_move_target(move)],
+					 promoted_pieces[get_move_promoted(move)]);
+	}
+	else
+	{
+		printf("%s%s\n", square_to_coordinates[get_move_source(move)],
+					 square_to_coordinates[get_move_target(move)]);
+	}
 }
 
 // Print move list:
@@ -1556,7 +1566,7 @@ static inline int make_move(int move, int move_flag)
 		if (enpassant_flag)
 		{
 			// Erase the pawn depending on side to move:
-			(side == white) ? pop_bit(bitboards[p], target_square + 8) : pop_bit(bitboards[p], target_square - 8);
+			(side == white) ? pop_bit(bitboards[p], target_square + 8) : pop_bit(bitboards[P], target_square - 8);
 		}
 		// Reseting the enpassant square:
 		enpassant = no_sq;
@@ -2040,26 +2050,7 @@ static inline void generate_moves(moves *move_list)
 }
 
 /******************************************************************************\
-=============================== INITIALIZE ALL =================================
-\******************************************************************************/
-
-// Initialize all variables:
-void init_all()
-{
-	// Initialize leaper pieces attacks:
-	init_leapers_attacks();
-	// Initialize sliders pieces attacks:
-	init_sliders_attacks(bishop);
-	init_sliders_attacks(rook);
-	/*
-	// Initialize magic numbers:
-	init_magic_numbers();
-	print_magic_numbers();
-	*/
-}
-
-/******************************************************************************\
-================================= MAIN DRIVER ==================================
+=================================== PERFT =====================================
 \******************************************************************************/
 
 // Get time in miliseconds:
@@ -2108,19 +2099,79 @@ static inline void perft_driver(int depth)
 	}
 }
 
+// PERFT test:
+void perft_test(int depth)
+{
+	printf("\nPerform PERFT test:\n\n");
+	// Create a move list instance:
+	moves move_list[1];
+	// Generate moves:
+	generate_moves(move_list);
+	// Initialize start time:
+	long start = get_time_ms();
+	// Loop over generated moves:
+	for (int move_count = 0; move_count < move_list->count; move_count++)
+	{
+		// Preserve board state:
+		copy_board();
+		// Make the move:
+		if (!make_move(move_list->moves[move_count], all_moves))
+		{
+			continue;
+		}
+		// Cummulative nodes:
+		long cummulative_nodes = nodes;
+		// Call PERFT driver recursively:
+		perft_driver(depth - 1);
+		// Old nodes:
+		long old_nodes = nodes - cummulative_nodes;
+		// Restore the board:
+		restore_board();
+		// Print move:
+		printf("move: %s%s%c nodes: %ld\n",
+					 square_to_coordinates[get_move_source(move_list->moves[move_count])],
+					 square_to_coordinates[get_move_target(move_list->moves[move_count])],
+					 promoted_pieces[get_move_promoted(move_list->moves[move_count])],
+					 old_nodes);
+	}
+	// Print results:
+	printf("\nDepth: %d\n", depth);
+	printf("Nodes: %ld\n", nodes);
+	printf("Time: %ldms\n\n", get_time_ms() - start);
+}
+
+/******************************************************************************\
+=============================== INITIALIZE ALL =================================
+\******************************************************************************/
+
+// Initialize all variables:
+void init_all()
+{
+	// Initialize leaper pieces attacks:
+	init_leapers_attacks();
+	// Initialize sliders pieces attacks:
+	init_sliders_attacks(bishop);
+	init_sliders_attacks(rook);
+	/*
+	// Initialize magic numbers:
+	init_magic_numbers();
+	print_magic_numbers();
+	*/
+}
+
+/******************************************************************************\
+================================= MAIN DRIVER ==================================
+\******************************************************************************/
+
 int main()
 {
 	// Initialize all variables:
 	init_all();
 	// Parse FEN:
-	parse_fen(start_position);
+	parse_fen(tricky_position);
 	print_board();
-	// Start tracking time:
-	int start = get_time_ms();
-	// Running the PERFT driver:
-	perft_driver(6);
-	// Time taken to execute program:
-	printf("Wasted %dms to find %ld nodes.\n", get_time_ms() - start, nodes);
+	// Running the PERFT test:
+	perft_test(5);
 	// Return:
 	return 0;
 }
