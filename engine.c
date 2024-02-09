@@ -2200,8 +2200,70 @@ int parse_move(char *move_string)
 	}
 	// Return illegal move:
 	return 0;
-	// Testing:
-	printf("Target square: %s\n", square_to_coordinates[target_square]);
+}
+
+// Parse UCI position command:
+void parse_position(char *command)
+{
+	// Shift pointer to the right where next token begins:
+	command += 9;
+	// Initialize pointer to the current char int the commmand string:
+	char *current_char = command;
+	// Parse UCI "startpos" command:
+	if (strncmp(command, "startpos", 8) == 0)
+	{
+		// Initialize chess board with starting position:
+		parse_fen(start_position);
+	}
+	// Parse UCI "fen" command:
+	else
+	{
+		// Make sure FEN command is available whitin command string:
+		current_char = strstr(command, "fen");
+		// If FEN command is not available:
+		if (current_char == NULL)
+		{
+			// Initialize chess board with starting position:
+			parse_fen(start_position);
+		}
+		// If FEN command is available:
+		else
+		{
+			// Shift pointer to the right where next token begins:
+			current_char += 4;
+			// Initialize chess board with fen string:
+			parse_fen(current_char);
+		}
+	}
+	// Parse moves after position:
+	current_char = strstr(command, "moves");
+	// If moves command is available:
+	if (current_char != NULL)
+	{
+		// Shift pointer to the right where next token begins:
+		current_char += 6;
+		// Loop over the moves within a moves string:
+		while (*current_char)
+		{
+			// Parse next move:
+			int move = parse_move(current_char);
+			// If no more moves:
+			if (move == 0)
+			{
+				// Break out of the loop:
+				break;
+			}
+			// Make move on the chess board:
+			make_move(move, all_moves);
+			// Move current char pointer to the end of current move:
+			while (*current_char && *current_char != ' ')
+			{
+				current_char++;
+			}
+			// Go to the next move:
+			current_char++;
+		}
+	}
 }
 
 /******************************************************************************\
@@ -2231,22 +2293,9 @@ int main()
 {
 	// Initialize all variables:
 	init_all();
-	// Parse FEN:
-	parse_fen("r3k2r/p11pqpb1/bn2pnp1/2pPN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq c6 0 1 ");
+	// Parse position command:
+	parse_position("position startpos moves e2e4 e7e5 g1f3");
 	print_board();
-	// Testing:
-	int move = parse_move("d5c6");
-	// If move is legal, make on the board:
-	if (move)
-	{
-		make_move(move, all_moves);
-		print_board();
-	}
-	// Otherwise:
-	else
-	{
-		printf("Illegal move!");
-	}
 	// Return:
 	return 0;
 }
