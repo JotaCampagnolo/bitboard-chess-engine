@@ -9,6 +9,7 @@
 
 // System headers:
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #ifdef WIN64
 #include <windows.h>
@@ -2202,7 +2203,7 @@ int parse_move(char *move_string)
 	return 0;
 }
 
-// Parse UCI position command:
+// Parse UCI <position> command:
 void parse_position(char *command)
 {
 	// Shift pointer to the right where next token begins:
@@ -2266,6 +2267,29 @@ void parse_position(char *command)
 	}
 }
 
+// Parse UCI <go> command:
+void parse_go(char *command)
+{
+	// Initialize depth:
+	int depth = -1;
+	// Initialize char pointer to the current depth argument:
+	char *current_depth = NULL;
+	// Handle fixed depth search:
+	if (current_depth = strstr(command, "depth"))
+	{
+		// Convert string to integer:
+		depth = atoi(current_depth + 6);
+	}
+	// Diferent time controls placeholder:
+	else
+	{
+		depth = 6;
+	}
+	// Search position:
+	// search_position(depth);
+	printf("Depth: %d\n", depth);
+}
+
 /******************************************************************************\
 =============================== INITIALIZE ALL =================================
 \******************************************************************************/
@@ -2293,9 +2317,11 @@ int main()
 {
 	// Initialize all variables:
 	init_all();
-	// Parse position command:
+	// Parse <position> command:
 	parse_position("position startpos moves e2e4 e7e5 g1f3");
 	print_board();
+	// Parse <go> command:
+	parse_go("go depth 6");
 	// Return:
 	return 0;
 }
