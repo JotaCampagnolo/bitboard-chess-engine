@@ -2141,6 +2141,70 @@ void perft_test(int depth)
 }
 
 /******************************************************************************\
+==================================== UCI =======================================
+\******************************************************************************/
+
+// Parse the user/GUI move string input (e.g "e7e8q"):
+int parse_move(char *move_string)
+{
+	// Inititalize a move list instance:
+	moves move_list[1];
+	// Generate the moves:
+	generate_moves(move_list);
+	// Parse the squares:
+	int source_square = (move_string[0] - 'a') + (8 - (move_string[1] - '0')) * 8;
+	int target_square = (move_string[2] - 'a') + (8 - (move_string[3] - '0')) * 8;
+	// Loop over the moves within the move list:
+	for (int move_count = 0; move_count < move_list->count; move_count++)
+	{
+		// Initialize move:
+		int move = move_list->moves[move_count];
+		// Make sure source and target squares are available within the generated move:
+		if (source_square == get_move_source(move) && target_square == get_move_target(move))
+		{
+			// Initialize promoted piece:
+			int promoted_piece = get_move_promoted(move);
+			// Promoted piece is available:
+			if (promoted_piece)
+			{
+				// Promoted to queen:
+				if ((promoted_piece == Q || promoted_piece == q) && move_string[4] == 'q')
+				{
+					// Return legal move:
+					return move;
+				}
+				// Promoted to rook:
+				else if ((promoted_piece == R || promoted_piece == r) && move_string[4] == 'r')
+				{
+					// Return legal move:
+					return move;
+				}
+				// Promoted to bishop:
+				else if ((promoted_piece == B || promoted_piece == b) && move_string[4] == 'b')
+				{
+					// Return legal move:
+					return move;
+				}
+				// Promoted to knight:
+				else if ((promoted_piece == N || promoted_piece == n) && move_string[4] == 'n')
+				{
+					// Return legal move:
+					return move;
+				}
+				// Continue the loop on possible wrong promotions (e.g "e7e8k"):
+				continue;
+			}
+			// Return legal move:
+			return move;
+		}
+	}
+	// Return illegal move:
+	return 0;
+	// Testing:
+	printf("Target square: %s\n", square_to_coordinates[target_square]);
+}
+
+/******************************************************************************\
 =============================== INITIALIZE ALL =================================
 \******************************************************************************/
 
@@ -2168,10 +2232,21 @@ int main()
 	// Initialize all variables:
 	init_all();
 	// Parse FEN:
-	parse_fen(tricky_position);
+	parse_fen("r3k2r/p11pqpb1/bn2pnp1/2pPN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq c6 0 1 ");
 	print_board();
-	// Running the PERFT test:
-	perft_test(5);
+	// Testing:
+	int move = parse_move("d5c6");
+	// If move is legal, make on the board:
+	if (move)
+	{
+		make_move(move, all_moves);
+		print_board();
+	}
+	// Otherwise:
+	else
+	{
+		printf("Illegal move!");
+	}
 	// Return:
 	return 0;
 }
