@@ -1427,7 +1427,7 @@ void print_move_list(moves *move_list)
 	printf("\n\033[0;30m+-------------------------------------------------------------------+\n");
 	printf("|                       \033[0;33mPRINTING THE MOVE LIST\033[0;30m                      |\n");
 	printf("+----------+----------+-----------+----------+-----------+----------+\n");
-	printf("| \033[0;33mmove\033[0;30m     | \033[0;33mpiece\033[0;30m    | \033[0;33mcapture\033[0;30m   | \033[0;33mdouble\033[0;30m   | \033[0;33menpassant\033[0;30m | \033[0;33mcastling\033[0;30m |\n");
+	printf("| \033[0;33mMove\033[0;30m     | \033[0;33mPiece\033[0;30m    | \033[0;33mCapture\033[0;30m   | \033[0;33mDouble\033[0;30m   | \033[0;33mEnpassant\033[0;30m | \033[0;33mCastling\033[0;30m |\n");
 	printf("+----------+----------+-----------+----------+-----------+----------+\n");
 	// On empty move list:
 	if (move_list->count < 1)
@@ -2346,6 +2346,74 @@ int ply;
 // Best move:
 int best_move;
 
+// Score moves function:
+static inline int score_move(int move)
+{
+	// Score capture move:
+	if (get_move_capture(move))
+	{
+		// Initialize target piece:
+		int target_piece = P;
+		// Pick up bitboard piece index ranges depending on side:
+		int start_piece, end_piece;
+		// White to move:
+		if (side == white)
+		{
+			start_piece = p;
+			end_piece = k;
+		}
+		// Black to move:
+		else
+		{
+			start_piece = P;
+			end_piece = K;
+		}
+		// Loop over the bitboards of the opposite side to move:
+		for (int bb_piece = start_piece; bb_piece <= end_piece; bb_piece++)
+		{
+			// If there is a piece on the target square:
+			if (get_bit(bitboards[bb_piece], get_move_target(move)))
+			{
+				// Set up the target piece:
+				target_piece = bb_piece;
+				break;
+			}
+		}
+		// Score move by MVV LVA lookup [source_piece][target_piece]:
+		return mvv_lva[get_move_piece(move)][target_piece];
+	}
+	// Score quiet move:
+	else
+	{
+	}
+	// Return:
+	return 0;
+}
+
+// Print the moves and its scores from a given move_list:
+void print_moves_scores(moves *move_list)
+{
+	// Print the header:
+	printf("+----------------+\n");
+	printf("|  \033[0;33mMOVES SCORES\033[0;30m  |\n");
+	printf("+--------+-------+\n");
+	printf("|  \033[0;33mMove\033[0;30m  | \033[0;33mScore\033[0;30m |\n");
+	printf("+--------+-------+\n");
+	// Loop over the moves within a move list:
+	for (int count = 0; count <= move_list->count; count++)
+	{
+		// Print the move and score:
+		printf("| \e[0m");
+		if (!get_move_promoted(move_list->moves[count]))
+		{
+			printf(" ");
+		}
+		print_move(move_list->moves[count]);
+		printf("\033[0;30m  | %s%5d\033[0;30m |\n", (score_move(move_list->moves[count]) > 0) ? "\033[0;32m" : "", score_move(move_list->moves[count]));
+		printf("+--------+-------+\e[0m\n");
+	}
+}
+
 // Quiescence serach:
 static inline int quiescence(int alpha, int beta)
 {
@@ -2774,11 +2842,17 @@ int main()
 	if (debug)
 	{
 		// Parse FEN:
-		parse_fen("r2q1rk1/ppp2ppp/2n1bn2/2b1p3/3pP3/3P1NPP/PPP1NPB1/R1BQ1RK1 b - - 0 9 ");
+		parse_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ");
 		// Print the board:
 		print_board();
 		// Search position:
-		search_position(3);
+		// search_position(3);
+		// Create a move list:
+		moves move_list[1];
+		// Generate moves:
+		generate_moves(move_list);
+		// Print moves scores:
+		print_moves_scores(move_list);
 	}
 	// If debug mode is disabled:
 	else
