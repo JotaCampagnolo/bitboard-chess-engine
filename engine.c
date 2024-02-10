@@ -1410,13 +1410,13 @@ void print_move(int move)
 {
 	if (get_move_promoted(move))
 	{
-		printf("%s%s%c\n", square_to_coordinates[get_move_source(move)],
+		printf("%s%s%c", square_to_coordinates[get_move_source(move)],
 					 square_to_coordinates[get_move_target(move)],
 					 promoted_pieces[get_move_promoted(move)]);
 	}
 	else
 	{
-		printf("%s%s\n", square_to_coordinates[get_move_source(move)],
+		printf("%s%s", square_to_coordinates[get_move_source(move)],
 					 square_to_coordinates[get_move_target(move)]);
 	}
 }
@@ -2309,11 +2309,89 @@ static inline int evaluate()
 ================================== SEARCH ======================================
 \******************************************************************************/
 
+// Half move counter:
+int ply;
+
+// Best move:
+int best_move;
+
+// Negamax alpha beta search:
+static inline int negamax(int alpha, int beta, int depth)
+{
+	// Recursions escape condition:
+	if (depth == 0)
+	{
+		return evaluate();
+	}
+	// Increment nodes count:
+	nodes++;
+	// Best move so far:
+	int best_so_far;
+	// Old value of alpha:
+	int old_alpha = alpha;
+	// Create a move list instance:
+	moves move_list[1];
+	// Generate the moves:
+	generate_moves(move_list);
+	// Loop over moves within a movelist:
+	for (int count = 0; count < move_list->count; count++)
+	{
+		// Preserve the board state:
+		copy_board();
+		// Increment the ply:
+		ply++;
+		// Make sure to make only legal moves:
+		if (make_move(move_list->moves[count], all_moves) == 0)
+		{
+			// Decrement ply:
+			ply--;
+			// Skip to the next move:
+			continue;
+		}
+		// Score current move:
+		int score = -negamax(-beta, -alpha, depth - 1);
+		// Decrement ply:
+		ply--;
+		// Take move back:
+		restore_board();
+		// Fail-hard beta cutoff:
+		if (score >= beta)
+		{
+			// Node (moves) fails high:
+			return beta;
+		}
+		// Found a better move:
+		if (score > alpha)
+		{
+			// PV node (move):
+			alpha = score;
+			// If its a root move:
+			if (ply == 0)
+			{
+				// Update the best move so far:
+				best_so_far = move_list->moves[count];
+			}
+		}
+	}
+	// Found a better move:
+	if (old_alpha != alpha)
+	{
+		// Initialize best move:
+		best_move = best_so_far;
+	}
+	// Node (move) fails low:
+	return alpha;
+}
+
 // Search position for the best move:
 void search_position(int depth)
 {
-	// Best move placeholder:
-	printf("bestmove d2d4\n");
+	// Find the best move with a given position:
+	int score = negamax(-50000, 50000, depth);
+	// Best move command:
+	printf("bestmove ");
+	print_move(best_move);
+	printf("\n");
 }
 
 /******************************************************************************\
@@ -2568,16 +2646,16 @@ int main()
 	// Initialize all variables:
 	init_all();
 	// Debug mode variable:
-	int debug = 1;
+	int debug = 0;
 	// If debug mode is enabled:
 	if (debug)
 	{
 		// Parse FEN:
-		parse_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/R1BQKBNR w KQkq - 0 1 ");
+		parse_fen(start_position);
 		// Print the board:
 		print_board();
-		// Print the evaluation score:
-		printf("Score: %d\n", evaluate());
+		// Search position:
+		search_position(2);
 	}
 	// If debug mode is disabled:
 	else
