@@ -2142,6 +2142,68 @@ void perft_test(int depth)
 }
 
 /******************************************************************************\
+================================ EVALUATION ====================================
+\******************************************************************************/
+
+/*
+
+	♟︎	=	 100			= ♟︎
+	♞	 =	300			 = ♟︎ * 3
+	♝	 =	301			 = ♟︎ * 3 + 1
+	♜	 =	500			 = ♟︎ * 5
+	♛	 =	900			 = ♟︎ * 9
+	♚	 =	10000		 = ♟︎ * 100
+
+*/
+
+// Pieces material value:
+int material_score[12] = {
+		100,	 // white PAWN
+		300,	 // white KNIGHT
+		301,	 // white BISHOP
+		500,	 // white ROOK
+		900,	 // white QUEEN
+		10000, // white KING
+		-100,	 // black PAWN
+		-300,	 // black KNIGHT
+		-301,	 // black BISHOP
+		-500,	 // black ROOK
+		-900,	 // black QUEEN
+		-10000 // black KING
+};
+
+// Position evaluation:
+static inline int evaluate()
+{
+	// Static evaluation score:
+	int score = 0;
+	// Current pieces bitboard copy:
+	U64 bitboard;
+	// Initialize piece and square:
+	int piece, square;
+	// Loop over the pieces bitboards:
+	for (int bb_piece = P; bb_piece <= k; bb_piece++)
+	{
+		// Initialize piece bitboard copy:
+		bitboard = bitboards[bb_piece];
+		// Loop over pieces within a bitboard:
+		while (bitboard)
+		{
+			// Initialize the piece:
+			piece = bb_piece;
+			// Initialize square:
+			square = get_ls1b_index(bitboard);
+			// Score material weights:
+			score += material_score[piece];
+			// Pop LS1B:
+			pop_bit(bitboard, square);
+		}
+	}
+	// Return final evaluation based on side:
+	return (side == white) ? score : -score;
+}
+
+/******************************************************************************\
 ================================== SEARCH ======================================
 \******************************************************************************/
 
@@ -2403,8 +2465,24 @@ int main()
 {
 	// Initialize all variables:
 	init_all();
-	// Connect to the GUI:
-	uci_loop();
+	// Debug mode variable:
+	int debug = 1;
+	// If debug mode is enabled:
+	if (debug)
+	{
+		// Parse FEN:
+		parse_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/R1BQKBNR w KQkq - 0 1 ");
+		// Print the board:
+		print_board();
+		// Print the evaluation score:
+		printf("Score: %d\n", evaluate());
+	}
+	// If debug mode is disabled:
+	else
+	{
+		// Connect to the GUI:
+		uci_loop();
+	}
 	// Return:
 	return 0;
 }
