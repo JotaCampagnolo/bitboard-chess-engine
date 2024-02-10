@@ -2409,7 +2409,23 @@ void print_moves_scores(moves *move_list)
 			printf(" ");
 		}
 		print_move(move_list->moves[count]);
-		printf("\033[0;30m  | %s%5d\033[0;30m |\n", (score_move(move_list->moves[count]) > 0) ? "\033[0;32m" : "", score_move(move_list->moves[count]));
+		// Wich color to use for the move score:
+		if (score_move(move_list->moves[count]) >= 500)
+		{
+			printf("\033[0;30m  | \033[0;31m%5d\033[0;30m |\n", score_move(move_list->moves[count]));
+		}
+		else if (score_move(move_list->moves[count]) >= 300)
+		{
+			printf("\033[0;30m  | \033[0;33m%5d\033[0;30m |\n", score_move(move_list->moves[count]));
+		}
+		else if (score_move(move_list->moves[count]) >= 100)
+		{
+			printf("\033[0;30m  | \033[0;32m%5d\033[0;30m |\n", score_move(move_list->moves[count]));
+		}
+		else
+		{
+			printf("\033[0;30m  | \033[0;30m%5d\033[0;30m |\n", score_move(move_list->moves[count]));
+		}
 		printf("+--------+-------+\e[0m\n");
 	}
 }
