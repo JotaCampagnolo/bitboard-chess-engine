@@ -2142,6 +2142,17 @@ void perft_test(int depth)
 }
 
 /******************************************************************************\
+================================== SEARCH ======================================
+\******************************************************************************/
+
+// Search position for the best move:
+void search_position(int depth)
+{
+	// Best move placeholder:
+	printf("bestmove d2d4\n");
+}
+
+/******************************************************************************\
 ==================================== UCI =======================================
 \******************************************************************************/
 
@@ -2265,6 +2276,8 @@ void parse_position(char *command)
 			current_char++;
 		}
 	}
+	// Print the board:
+	print_board();
 }
 
 // Parse UCI <go> command:
@@ -2286,8 +2299,81 @@ void parse_go(char *command)
 		depth = 6;
 	}
 	// Search position:
-	// search_position(depth);
-	printf("Depth: %d\n", depth);
+	search_position(depth);
+}
+
+// Main UCI loop:
+void uci_loop()
+{
+	// Reset STDIN/STDOUT buffers:
+	setbuf(stdin, NULL);
+	setbuf(stdout, NULL);
+	// Define user/GUI input buffer:
+	char input[2000];
+	// Print engine information:
+	printf("id name BBC\n");
+	printf("id name JMC\n");
+	printf("uciok\n");
+	// Main loop:
+	while (1)
+	{
+		// Reset user/GUI input:
+		memset(input, 0, sizeof(input));
+		// Make sure output reaches the GUI:
+		fflush(stdout);
+		// Get the user/GUI input:
+		if (!fgets(input, 2000, stdin))
+		{
+			// Continue the loop:
+			continue;
+		}
+		// Make sure input is available:
+		if (input[0] == '\n')
+		{
+			// Continue the loop:
+			continue;
+		}
+		// Parse UCI <isready> command:
+		if (strncmp(input, "isready", 7) == 0)
+		{
+			// Print response:
+			printf("readyok\n");
+			// Continue the loop:
+			continue;
+		}
+		// Parse UCI <position> command:
+		else if (strncmp(input, "position", 8) == 0)
+		{
+			// Call parse position function:
+			parse_position(input);
+		}
+		// Parse UCI <ucinewgame> command:
+		else if (strncmp(input, "ucinewgame", 10) == 0)
+		{
+			// Call parse position function:
+			parse_position("position startpos");
+		}
+		// Parse UCI <go> command:
+		else if (strncmp(input, "go", 2) == 0)
+		{
+			// Call parse go function:
+			parse_go(input);
+		}
+		// Parse UCI <quit> command:
+		else if (strncmp(input, "quit", 4) == 0)
+		{
+			// Quit from the chess engine program execution:
+			break;
+		}
+		// Parse UCI <uci> command:
+		else if (strncmp(input, "uci", 3) == 0)
+		{
+			// Print engine information:
+			printf("id name BBC\n");
+			printf("id name JMC\n");
+			printf("uciok\n");
+		}
+	}
 }
 
 /******************************************************************************\
@@ -2317,11 +2403,8 @@ int main()
 {
 	// Initialize all variables:
 	init_all();
-	// Parse <position> command:
-	parse_position("position startpos moves e2e4 e7e5 g1f3");
-	print_board();
-	// Parse <go> command:
-	parse_go("go depth 6");
+	// Connect to the GUI:
+	uci_loop();
 	// Return:
 	return 0;
 }
