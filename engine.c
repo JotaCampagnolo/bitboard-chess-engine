@@ -1346,7 +1346,7 @@ void print_attacked_squares(int side)
 	// Print horizontal bottom border:
 	printf("|   +---+---+---+---+---+---+---+---+   |\n");
 	printf("|     \e[0ma   b   c   d   e   f   g   h\033[0;30m     |\n");
-	printf("+---------------------------------------+\n\n");
+	printf("+---------------------------------------+\e[0m\n\n");
 	// Print the bitboard as unsigned decimal number:
 	// printf("\e[0mBitboard state: %llu\n\n", bitboard);
 }
@@ -1455,7 +1455,7 @@ void print_move_list(moves *move_list)
 	}
 	printf("+----------+----------+-----------+----------+-----------+----------+\n");
 	printf("|                        \033[0;33mMOVE LIST SIZE: \033[0;32m%3d\033[0;30m                        |\n", move_list->count);
-	printf("+-------------------------------------------------------------------+\n");
+	printf("+-------------------------------------------------------------------+\e[0m\n");
 }
 
 // Preserve board state:
