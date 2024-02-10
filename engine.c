@@ -2415,6 +2415,8 @@ void search_position(int depth)
 	// If there is a best move:
 	if (best_move)
 	{
+		// Send the score to GUI through UCI command:
+		printf("info score cp %d depth %d nodes %ld\n", score, depth, nodes);
 		// Best move command:
 		printf("bestmove ");
 		print_move(best_move);
