@@ -2325,6 +2325,12 @@ static inline int negamax(int alpha, int beta, int depth)
 	}
 	// Increment nodes count:
 	nodes++;
+	// Is king in check:
+	int in_check = is_square_attacked(
+			(side == white) ? get_ls1b_index(bitboards[K]) : get_ls1b_index(bitboards[k]),
+			side ^ 1);
+	// Legal moves counter:
+	int legal_moves = 0;
 	// Best move so far:
 	int best_so_far;
 	// Old value of alpha:
@@ -2348,6 +2354,8 @@ static inline int negamax(int alpha, int beta, int depth)
 			// Skip to the next move:
 			continue;
 		}
+		// Increment legal moves:
+		legal_moves++;
 		// Score current move:
 		int score = -negamax(-beta, -alpha, depth - 1);
 		// Decrement ply:
@@ -2373,6 +2381,22 @@ static inline int negamax(int alpha, int beta, int depth)
 			}
 		}
 	}
+	// The is not any legal move to make in the current position:
+	if (legal_moves == 0)
+	{
+		// King is in check:
+		if (in_check)
+		{
+			// Return mating score (assuming closest distance to mate):
+			return -49000 + ply;
+		}
+		// King is not in check:
+		else
+		{
+			// Return stalemate score:
+			return 0;
+		}
+	}
 	// Found a better move:
 	if (old_alpha != alpha)
 	{
@@ -2388,10 +2412,14 @@ void search_position(int depth)
 {
 	// Find the best move with a given position:
 	int score = negamax(-50000, 50000, depth);
-	// Best move command:
-	printf("bestmove ");
-	print_move(best_move);
-	printf("\n");
+	// If there is a best move:
+	if (best_move)
+	{
+		// Best move command:
+		printf("bestmove ");
+		print_move(best_move);
+		printf("\n");
+	}
 }
 
 /******************************************************************************\
