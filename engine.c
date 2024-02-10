@@ -2309,6 +2309,37 @@ static inline int evaluate()
 ================================== SEARCH ======================================
 \******************************************************************************/
 
+/*
+
+	Most valuable VICTIM & less valuable ATTACKER:
+
+		(Victims) Pawn Knight Bishop   Rook  Queen   King
+	(Attackers)
+				Pawn   105    205    305    405    505    605
+			Knight   104    204    304    404    504    604
+			Bishop   103    203    303    403    503    603
+				Rook   102    202    302    402    502    602
+			 Queen   101    201    301    401    501    601
+				King   100    200    300    400    500    600
+
+*/
+
+// MVV LVA [attacker][victim]
+static int mvv_lva[12][12] = {
+		105, 205, 305, 405, 505, 605, 105, 205, 305, 405, 505, 605,
+		104, 204, 304, 404, 504, 604, 104, 204, 304, 404, 504, 604,
+		103, 203, 303, 403, 503, 603, 103, 203, 303, 403, 503, 603,
+		102, 202, 302, 402, 502, 602, 102, 202, 302, 402, 502, 602,
+		101, 201, 301, 401, 501, 601, 101, 201, 301, 401, 501, 601,
+		100, 200, 300, 400, 500, 600, 100, 200, 300, 400, 500, 600,
+
+		105, 205, 305, 405, 505, 605, 105, 205, 305, 405, 505, 605,
+		104, 204, 304, 404, 504, 604, 104, 204, 304, 404, 504, 604,
+		103, 203, 303, 403, 503, 603, 103, 203, 303, 403, 503, 603,
+		102, 202, 302, 402, 502, 602, 102, 202, 302, 402, 502, 602,
+		101, 201, 301, 401, 501, 601, 101, 201, 301, 401, 501, 601,
+		100, 200, 300, 400, 500, 600, 100, 200, 300, 400, 500, 600};
+
 // Half move counter:
 int ply;
 
@@ -2318,6 +2349,8 @@ int best_move;
 // Quiescence serach:
 static inline int quiescence(int alpha, int beta)
 {
+	// Increment nodes count:
+	nodes++;
 	// Evaluate position:
 	int evaluation = evaluate();
 	// Fail-hard beta cutoff:
@@ -2736,16 +2769,16 @@ int main()
 	// Initialize all variables:
 	init_all();
 	// Debug mode variable:
-	int debug = 0;
+	int debug = 1;
 	// If debug mode is enabled:
 	if (debug)
 	{
 		// Parse FEN:
-		parse_fen(start_position);
+		parse_fen("r2q1rk1/ppp2ppp/2n1bn2/2b1p3/3pP3/3P1NPP/PPP1NPB1/R1BQ1RK1 b - - 0 9 ");
 		// Print the board:
 		print_board();
 		// Search position:
-		search_position(2);
+		search_position(3);
 	}
 	// If debug mode is disabled:
 	else
