@@ -2315,13 +2315,73 @@ int ply;
 // Best move:
 int best_move;
 
+// Quiescence serach:
+static inline int quiescence(int alpha, int beta)
+{
+	// Evaluate position:
+	int evaluation = evaluate();
+	// Fail-hard beta cutoff:
+	if (evaluation >= beta)
+	{
+		// Node (moves) fails high:
+		return beta;
+	}
+	// Found a better move:
+	if (evaluation > alpha)
+	{
+		// PV node (move):
+		alpha = evaluation;
+	}
+	// Create a move list instance:
+	moves move_list[1];
+	// Generate the moves:
+	generate_moves(move_list);
+	// Loop over moves within a movelist:
+	for (int count = 0; count < move_list->count; count++)
+	{
+		// Preserve the board state:
+		copy_board();
+		// Increment the ply:
+		ply++;
+		// Make sure to make only legal moves:
+		if (make_move(move_list->moves[count], only_captures) == 0)
+		{
+			// Decrement ply:
+			ply--;
+			// Skip to the next move:
+			continue;
+		}
+		// Score current move:
+		int score = -quiescence(-beta, -alpha);
+		// Decrement ply:
+		ply--;
+		// Take move back:
+		restore_board();
+		// Fail-hard beta cutoff:
+		if (score >= beta)
+		{
+			// Node (moves) fails high:
+			return beta;
+		}
+		// Found a better move:
+		if (score > alpha)
+		{
+			// PV node (move):
+			alpha = score;
+		}
+	}
+	// Node (move) fails low:
+	return alpha;
+}
+
 // Negamax alpha beta search:
 static inline int negamax(int alpha, int beta, int depth)
 {
 	// Recursions escape condition:
 	if (depth == 0)
 	{
-		return evaluate();
+		// Run the quiescence search:
+		return quiescence(alpha, beta);
 	}
 	// Increment nodes count:
 	nodes++;
@@ -2381,7 +2441,7 @@ static inline int negamax(int alpha, int beta, int depth)
 			}
 		}
 	}
-	// The is not any legal move to make in the current position:
+	// There is not any legal move to make in the current position:
 	if (legal_moves == 0)
 	{
 		// King is in check:
