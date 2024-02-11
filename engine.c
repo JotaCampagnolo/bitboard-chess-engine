@@ -2632,8 +2632,6 @@ const int reduction_limit = 3;
 // Negamax alpha beta search:
 static inline int negamax(int alpha, int beta, int depth)
 {
-	// Define found PV node variable:
-	int found_pv = 0;
 	// Initialize PV length:
 	pv_length[ply] = ply;
 	// Recursions escape condition:
@@ -2715,59 +2713,43 @@ static inline int negamax(int alpha, int beta, int depth)
 		legal_moves++;
 		// Initialize variable to store moves score (from the static evaluation perspective):
 		int score;
-		// On PV node:
-		if (found_pv)
+		// Full depth search:
+		if (moves_searched == 0)
 		{
-			/* Once you've found a move with a score that is between alpha and beta,
-			the rest of the moves are searched with the goal of proving that they are all bad.
-			It's possible to do this a bit faster than a search that worries that one
-			of the remaining moves might be good. */
-			score = -negamax(-alpha - 1, -alpha, depth - 1);
-			/* If the algorithm finds out that it was wrong, and that one of the
-			subsequent moves was better than the first PV move, it has to search again,
-			in the normal alpha-beta manner.  This happens sometimes, and it's a waste of time,
-			but generally not often enough to counteract the savings gained from doing the
-			"bad move proof" search referred to earlier. */
-			if ((score > alpha) && (score < beta))
-			{
-				// Re-search the move that has failed to be proven bad:
-				score = -negamax(-beta, -alpha, depth - 1);
-			}
+			// Regular alpha beta search:
+			score = -negamax(-beta, -alpha, depth - 1);
 		}
-		// On all other types of nodes:
+		// LMR search:
 		else
 		{
-			// Full depth search:
-			if (moves_searched == 0)
+			// Condition to consider LMR (late move reduction):
+			if (moves_searched >= full_depth_moves && depth >= reduction_limit && in_check == 0 && get_move_capture(move_list->moves[count]) == 0 && get_move_promoted(move_list->moves[count]) == 0)
 			{
-				// Regular alpha beta search:
-				score = -negamax(-beta, -alpha, depth - 1);
+				// Search current move with reduced depth:
+				score = -negamax(-alpha - 1, -alpha, depth - 2);
 			}
-			// LMR search:
+			// Hack to ensure that full-depth search is done:
 			else
 			{
-				// Condition to consider LMR (late move reduction):
-				if (moves_searched >= full_depth_moves && depth >= reduction_limit && in_check == 0 && get_move_capture(move_list->moves[count]) == 0 && get_move_promoted(move_list->moves[count]) == 0)
+				score = alpha + 1;
+			}
+			// Principle variation search PVS:
+			if (score > alpha)
+			{
+				/* Once you've found a move with a score that is between alpha and beta,
+				the rest of the moves are searched with the goal of proving that they are all bad.
+				It's possible to do this a bit faster than a search that worries that one
+				of the remaining moves might be good. */
+				score = -negamax(-alpha - 1, -alpha, depth - 1);
+				/* If the algorithm finds out that it was wrong, and that one of the
+				subsequent moves was better than the first PV move, it has to search again,
+				in the normal alpha-beta manner.  This happens sometimes, and it's a waste of time,
+				but generally not often enough to counteract the savings gained from doing the
+				"bad move proof" search referred to earlier. */
+				if ((score > alpha) && (score < beta))
 				{
-					// Search current move with reduced depth:
-					score = -negamax(-alpha - 1, -alpha, depth - 2);
-				}
-				// Hack to ensure that full-depth search is done:
-				else
-				{
-					score = alpha + 1;
-				}
-				// Find a better move during LMR:
-				if (score > alpha)
-				{
-					// Re-search at full depth but with narrowed score bandwidth:
-					score = -negamax(-alpha - 1, -alpha, depth - 1);
-					// LMR fails:
-					if ((score > alpha) && (score < beta))
-					{
-						// Re-search at full depth and full score bandwidth:
-						score = -negamax(-beta, -alpha, depth - 1);
-					}
+					// Re-search the move that has failed to be proven bad:
+					score = -negamax(-beta, -alpha, depth - 1);
 				}
 			}
 		}
@@ -2801,8 +2783,6 @@ static inline int negamax(int alpha, int beta, int depth)
 			}
 			// PV node (move):
 			alpha = score;
-			// Enable found PV flag:
-			found_pv = 1;
 			// Write PV move:
 			pv_table[ply][ply] = move_list->moves[count];
 			// Loop over next ply line:
