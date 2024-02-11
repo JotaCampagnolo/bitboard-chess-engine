@@ -2149,9 +2149,9 @@ void perft_test(int depth)
 
 	♟︎	=	 100			= ♟︎
 	♞	 =	300			 = ♟︎ * 3
-	♝	 =	301			 = ♟︎ * 3 + 1
+	♝	 =	350			 = ♟︎ * 3 + 1
 	♜	 =	500			 = ♟︎ * 5
-	♛	 =	900			 = ♟︎ * 9
+	♛	 =	1000		 = ♟︎ * 9
 	♚	 =	10000		 = ♟︎ * 100
 
 */
@@ -2160,15 +2160,15 @@ void perft_test(int depth)
 int material_score[12] = {
 		100,	 // white PAWN
 		300,	 // white KNIGHT
-		301,	 // white BISHOP
+		350,	 // white BISHOP
 		500,	 // white ROOK
-		900,	 // white QUEEN
+		1000,	 // white QUEEN
 		10000, // white KING
 		-100,	 // black PAWN
 		-300,	 // black KNIGHT
-		-301,	 // black BISHOP
+		-350,	 // black BISHOP
 		-500,	 // black ROOK
-		-900,	 // black QUEEN
+		-1000, // black QUEEN
 		-10000 // black KING
 };
 
@@ -2486,6 +2486,8 @@ static inline int quiescence(int alpha, int beta)
 	moves move_list[1];
 	// Generate the moves:
 	generate_moves(move_list);
+	// Sort the moves in the move list:
+	sort_moves(move_list);
 	// Loop over moves within a movelist:
 	for (int count = 0; count < move_list->count; count++)
 	{
@@ -2539,6 +2541,12 @@ static inline int negamax(int alpha, int beta, int depth)
 	int in_check = is_square_attacked(
 			(side == white) ? get_ls1b_index(bitboards[K]) : get_ls1b_index(bitboards[k]),
 			side ^ 1);
+	// Increase search depth if the king has been exposed into a check:
+	if (in_check)
+	{
+		// Increase the depth:
+		depth++;
+	}
 	// Legal moves counter:
 	int legal_moves = 0;
 	// Best move so far:
@@ -2549,6 +2557,8 @@ static inline int negamax(int alpha, int beta, int depth)
 	moves move_list[1];
 	// Generate the moves:
 	generate_moves(move_list);
+	// Sort the moves in the move list:
+	sort_moves(move_list);
 	// Loop over moves within a movelist:
 	for (int count = 0; count < move_list->count; count++)
 	{
@@ -2891,11 +2901,12 @@ int main()
 	if (debug)
 	{
 		// Parse FEN:
-		parse_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ");
+		parse_fen(tricky_position);
 		// Print the board:
 		print_board();
 		// Search position:
-		// search_position(3);
+		search_position(5);
+		/*
 		// Create a move list:
 		moves move_list[1];
 		// Generate moves:
@@ -2906,6 +2917,7 @@ int main()
 		sort_moves(move_list);
 		// Print moves scores:
 		print_moves_scores(move_list);
+		*/
 	}
 	// If debug mode is disabled:
 	else
