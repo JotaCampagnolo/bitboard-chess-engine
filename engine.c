@@ -2614,6 +2614,8 @@ static inline int quiescence(int alpha, int beta)
 // Negamax alpha beta search:
 static inline int negamax(int alpha, int beta, int depth)
 {
+	// Define found PV node variable:
+	int found_pv = 0;
 	// Initialize PV length:
 	pv_length[ply] = ply;
 	// Recursions escape condition:
@@ -2671,8 +2673,33 @@ static inline int negamax(int alpha, int beta, int depth)
 		}
 		// Increment legal moves:
 		legal_moves++;
-		// Score current move:
-		int score = -negamax(-beta, -alpha, depth - 1);
+		// Initialize variable to store moves score (from the static evaluation perspective):
+		int score;
+		// On PV node:
+		if (found_pv)
+		{
+			/* Once you've found a move with a score that is between alpha and beta,
+			the rest of the moves are searched with the goal of proving that they are all bad.
+			It's possible to do this a bit faster than a search that worries that one
+			of the remaining moves might be good. */
+			score = -negamax(-alpha - 1, -alpha, depth - 1);
+			/* If the algorithm finds out that it was wrong, and that one of the
+			subsequent moves was better than the first PV move, it has to search again,
+			in the normal alpha-beta manner.  This happens sometimes, and it's a waste of time,
+			but generally not often enough to counteract the savings gained from doing the
+			"bad move proof" search referred to earlier. */
+			if ((score > alpha) && (score < beta))
+			{
+				// Re-search the move that has failed to be proven bad:
+				score = -negamax(-beta, -alpha, depth - 1);
+			}
+		}
+		// On all other types of nodes:
+		else
+		{
+			// Regular alpha beta search:
+			score = -negamax(-beta, -alpha, depth - 1);
+		}
 		// Decrement ply:
 		ply--;
 		// Take move back:
@@ -2701,6 +2728,8 @@ static inline int negamax(int alpha, int beta, int depth)
 			}
 			// PV node (move):
 			alpha = score;
+			// Enable found PV flag:
+			found_pv = 1;
 			// Write PV move:
 			pv_table[ply][ply] = move_list->moves[count];
 			// Loop over next ply line:
@@ -2751,8 +2780,6 @@ void search_position(int depth)
 	// Iterative deepining:
 	for (int current_depth = 1; current_depth <= depth; current_depth++)
 	{
-		// Temporary reset:
-		nodes = 0;
 		// Enable follow PV flag:
 		follow_pv = 1;
 		// Find the best move with a given position:
@@ -3032,7 +3059,7 @@ int main()
 	if (debug)
 	{
 		// Parse FEN:
-		parse_fen(tricky_position);
+		parse_fen(cmk_position);
 		// Print the board:
 		print_board();
 		// Search position:
