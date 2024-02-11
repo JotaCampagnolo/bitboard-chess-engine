@@ -2340,6 +2340,12 @@ static int mvv_lva[12][12] = {
 		101, 201, 301, 401, 501, 601, 101, 201, 301, 401, 501, 601,
 		100, 200, 300, 400, 500, 600, 100, 200, 300, 400, 500, 600};
 
+// Killer moves [id][ply]:
+int killer_moves[2][64];
+
+// Hisotry moves [piece][square]:
+int history_moves[12][64];
+
 // Half move counter:
 int ply;
 
@@ -2380,11 +2386,26 @@ static inline int score_move(int move)
 			}
 		}
 		// Score move by MVV LVA lookup [source_piece][target_piece]:
-		return mvv_lva[get_move_piece(move)][target_piece];
+		return mvv_lva[get_move_piece(move)][target_piece] + 10000;
 	}
 	// Score quiet move:
 	else
 	{
+		// Score 1st killer move:
+		if (killer_moves[0][ply] == move)
+		{
+			return 9000;
+		}
+		// Score 2nd killer move:
+		else if (killer_moves[1][ply] == move)
+		{
+			return 8000;
+		}
+		// Score history moves:
+		else
+		{
+			return history_moves[get_move_piece(move)][get_move_target(move)];
+		}
 	}
 	// Return:
 	return 0;
@@ -2585,12 +2606,17 @@ static inline int negamax(int alpha, int beta, int depth)
 		// Fail-hard beta cutoff:
 		if (score >= beta)
 		{
+			// Store killer moves:
+			killer_moves[1][ply] = killer_moves[0][ply];
+			killer_moves[0][ply] = move_list->moves[count];
 			// Node (moves) fails high:
 			return beta;
 		}
 		// Found a better move:
 		if (score > alpha)
 		{
+			// Store history moves:
+			history_moves[get_move_piece(move_list->moves[count])][get_move_target(move_list->moves[count])] += depth;
 			// PV node (move):
 			alpha = score;
 			// If its a root move:
@@ -2906,18 +2932,6 @@ int main()
 		print_board();
 		// Search position:
 		search_position(5);
-		/*
-		// Create a move list:
-		moves move_list[1];
-		// Generate moves:
-		generate_moves(move_list);
-		// Print moves scores:
-		print_moves_scores(move_list);
-		// Sort the moves:
-		sort_moves(move_list);
-		// Print moves scores:
-		print_moves_scores(move_list);
-		*/
 	}
 	// If debug mode is disabled:
 	else
