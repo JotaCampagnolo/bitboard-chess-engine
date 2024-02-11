@@ -2340,8 +2340,11 @@ static int mvv_lva[12][12] = {
 		101, 201, 301, 401, 501, 601, 101, 201, 301, 401, 501, 601,
 		100, 200, 300, 400, 500, 600, 100, 200, 300, 400, 500, 600};
 
+// Max reachable ply within a search:
+#define max_ply 64
+
 // Killer moves [id][ply]:
-int killer_moves[2][64];
+int killer_moves[2][max_ply];
 
 // Hisotry moves [piece][square]:
 int history_moves[12][64];
@@ -2370,11 +2373,11 @@ int history_moves[12][64];
 
 */
 
-// PV length:
-int pv_length[64];
+// PV length [ply]:
+int pv_length[max_ply];
 
-// PV table:
-int pv_table[64][64];
+// PV table [ply][ply]:
+int pv_table[max_ply][max_ply];
 
 // Half move counter:
 int ply;
@@ -2585,6 +2588,12 @@ static inline int negamax(int alpha, int beta, int depth)
 		// Run the quiescence search:
 		return quiescence(alpha, beta);
 	}
+	// Too deep, hence there is an overflow of arrrays relying on max ply constant:
+	if (ply > max_ply - 1)
+	{
+		// Evaluate position:
+		return evaluate();
+	}
 	// Increment nodes count:
 	nodes++;
 	// Is king in check:
@@ -2687,19 +2696,32 @@ static inline int negamax(int alpha, int beta, int depth)
 // Search position for the best move:
 void search_position(int depth)
 {
-	// Find the best move with a given position:
-	int score = negamax(-50000, 50000, depth);
-	// Send the score to GUI through UCI command:
-	printf("info score cp %d depth %d nodes %ld pv \n", score, depth, nodes);
-	// Loop over the moves within a PV line:
-	for (int count = 0; count < pv_length[0]; count++)
+	// Define the best score variable:
+	int score = 0;
+	// Reset nodes counter:
+	nodes = 0;
+	// Clear all the helper structures for search:
+	memset(killer_moves, 0, sizeof(killer_moves));
+	memset(history_moves, 0, sizeof(history_moves));
+	memset(pv_table, 0, sizeof(pv_table));
+	memset(pv_length, 0, sizeof(pv_length));
+	// Iterative deepining:
+	for (int current_depth = 1; current_depth <= depth; current_depth++)
 	{
-		// Print the move:
-		print_move(pv_table[0][count]);
-		printf(" ");
+		// Find the best move with a given position:
+		score = negamax(-50000, 50000, current_depth);
+		// Send the score to GUI through UCI command:
+		printf("info score cp %d depth %d nodes %ld pv ", score, current_depth, nodes);
+		// Loop over the moves within a PV line:
+		for (int count = 0; count < pv_length[0]; count++)
+		{
+			// Print the move:
+			print_move(pv_table[0][count]);
+			printf(" ");
+		}
+		// Print a new line:
+		printf("\n");
 	}
-	// Print a new line:
-	printf("\n");
 	// Best move command:
 	printf("bestmove ");
 	print_move(pv_table[0][0]);
@@ -2967,7 +2989,7 @@ int main()
 		// Print the board:
 		print_board();
 		// Search position:
-		search_position(5);
+		search_position(6);
 	}
 	// If debug mode is disabled:
 	else
