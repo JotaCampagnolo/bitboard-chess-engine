@@ -513,7 +513,7 @@ void print_board()
 	(castle & wk) ? printf("\033[0;32m%c\033[0;30m", '@') : printf("%c", '-');
 	printf("-+   |\n");
 	printf("|     \e[0ma   b   c   d   e   f   g   h\033[0;30m     |\n");
-	printf("+---------------------------------------+\n\n");
+	printf("+---------------------------------------+\e[0m\n\n");
 }
 
 // Parse FEN string:
@@ -2379,12 +2379,46 @@ int pv_length[max_ply];
 // PV table [ply][ply]:
 int pv_table[max_ply][max_ply];
 
+// Follow PV and score PV move:
+int follow_pv, score_pv;
+
 // Half move counter:
 int ply;
+
+// Enable PV move scoring:
+static inline void enable_pv_scoring(moves *move_list)
+{
+	// Disable following PV:
+	follow_pv = 0;
+	// Loop over the moves within a move list:
+	for (int count = 0; count < move_list->count; count++)
+	{
+		// Make sure we hit PV move:
+		if (pv_table[0][ply] == move_list->moves[count])
+		{
+			// Enable move scoring:
+			score_pv = 1;
+			// Enable PV following:
+			follow_pv = 1;
+		}
+	}
+}
 
 // Score moves function:
 static inline int score_move(int move)
 {
+	// If PV move scoring is allowed:
+	if (score_pv)
+	{
+		// Make sure we are dealing with PV move:
+		if (pv_table[0][ply] == move)
+		{
+			// Disable PV score flag:
+			score_pv = 0;
+			// Give PV move the highest score to search it first:
+			return 20000;
+		}
+	}
 	// Score capture move:
 	if (get_move_capture(move))
 	{
@@ -2612,6 +2646,12 @@ static inline int negamax(int alpha, int beta, int depth)
 	moves move_list[1];
 	// Generate the moves:
 	generate_moves(move_list);
+	// If following PV line:
+	if (follow_pv)
+	{
+		// Enable PV move scoring:
+		enable_pv_scoring(move_list);
+	}
 	// Sort the moves in the move list:
 	sort_moves(move_list);
 	// Loop over moves within a movelist:
@@ -2700,6 +2740,9 @@ void search_position(int depth)
 	int score = 0;
 	// Reset nodes counter:
 	nodes = 0;
+	// Reset PV flags:
+	follow_pv = 0;
+	score_pv = 0;
 	// Clear all the helper structures for search:
 	memset(killer_moves, 0, sizeof(killer_moves));
 	memset(history_moves, 0, sizeof(history_moves));
@@ -2708,6 +2751,10 @@ void search_position(int depth)
 	// Iterative deepining:
 	for (int current_depth = 1; current_depth <= depth; current_depth++)
 	{
+		// Temporary reset:
+		nodes = 0;
+		// Enable follow PV flag:
+		follow_pv = 1;
 		// Find the best move with a given position:
 		score = negamax(-50000, 50000, current_depth);
 		// Send the score to GUI through UCI command:
