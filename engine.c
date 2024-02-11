@@ -2400,7 +2400,7 @@ void print_moves_scores(moves *move_list)
 	printf("|  \033[0;33mMove\033[0;30m  | \033[0;33mScore\033[0;30m |\n");
 	printf("+--------+-------+\n");
 	// Loop over the moves within a move list:
-	for (int count = 0; count <= move_list->count; count++)
+	for (int count = 0; count < move_list->count; count++)
 	{
 		// Print the move and score:
 		printf("| \e[0m");
@@ -2427,6 +2427,39 @@ void print_moves_scores(moves *move_list)
 			printf("\033[0;30m  | \033[0;30m%5d\033[0;30m |\n", score_move(move_list->moves[count]));
 		}
 		printf("+--------+-------+\e[0m\n");
+	}
+}
+
+// Sort moves in descendent order:
+static inline int sort_moves(moves *move_list)
+{
+	// Move scores array:
+	int moves_scores[move_list->count];
+	// Score all the moves on the moves list:
+	for (int count = 0; count < move_list->count; count++)
+	{
+		// Score current move:
+		moves_scores[count] = score_move(move_list->moves[count]);
+	}
+	// Loop over current move within a move list:
+	for (int current_move = 0; current_move < move_list->count; current_move++)
+	{
+		// Loop over next move within a move list:
+		for (int next_move = current_move + 1; next_move < move_list->count; next_move++)
+		{
+			// Compare current and next move scores:
+			if (moves_scores[current_move] < moves_scores[next_move])
+			{
+				// Swap scores:
+				int temp_score = moves_scores[current_move];
+				moves_scores[current_move] = moves_scores[next_move];
+				moves_scores[next_move] = temp_score;
+				// Swap moves:
+				int temp_move = move_list->moves[current_move];
+				move_list->moves[current_move] = move_list->moves[next_move];
+				move_list->moves[next_move] = temp_move;
+			}
+		}
 	}
 }
 
@@ -2867,6 +2900,10 @@ int main()
 		moves move_list[1];
 		// Generate moves:
 		generate_moves(move_list);
+		// Print moves scores:
+		print_moves_scores(move_list);
+		// Sort the moves:
+		sort_moves(move_list);
 		// Print moves scores:
 		print_moves_scores(move_list);
 	}
