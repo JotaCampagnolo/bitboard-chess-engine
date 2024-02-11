@@ -2404,6 +2404,21 @@ static inline void enable_pv_scoring(moves *move_list)
 	}
 }
 
+/*
+
+	=======================
+				Move ordering
+	=======================
+
+	1. PV move
+	2. Captures in MVV/LVA
+	3. 1st killer move
+	4. 2nd killer move
+	5. History moves
+	6. Unsorted moves
+
+*/
+
 // Score moves function:
 static inline int score_move(int move)
 {
@@ -2611,6 +2626,9 @@ static inline int quiescence(int alpha, int beta)
 	return alpha;
 }
 
+const int full_depth_moves = 4;
+const int reduction_limit = 3;
+
 // Negamax alpha beta search:
 static inline int negamax(int alpha, int beta, int depth)
 {
@@ -2656,6 +2674,8 @@ static inline int negamax(int alpha, int beta, int depth)
 	}
 	// Sort the moves in the move list:
 	sort_moves(move_list);
+	// Number of moves searched in a move list:
+	int moves_searched = 0;
 	// Loop over moves within a movelist:
 	for (int count = 0; count < move_list->count; count++)
 	{
@@ -2697,13 +2717,46 @@ static inline int negamax(int alpha, int beta, int depth)
 		// On all other types of nodes:
 		else
 		{
-			// Regular alpha beta search:
-			score = -negamax(-beta, -alpha, depth - 1);
+			// Full depth search:
+			if (moves_searched == 0)
+			{
+				// Regular alpha beta search:
+				score = -negamax(-beta, -alpha, depth - 1);
+			}
+			// LMR search:
+			else
+			{
+				// Condition to consider LMR (late move reduction):
+				if (moves_searched >= full_depth_moves && depth >= reduction_limit && in_check == 0 && get_move_capture(move_list->moves[count]) == 0 && get_move_promoted(move_list->moves[count]) == 0)
+				{
+					// Search current move with reduced depth:
+					score = -negamax(-alpha - 1, -alpha, depth - 2);
+				}
+				// Hack to ensure that full-depth search is done:
+				else
+				{
+					score = alpha + 1;
+				}
+				// Find a better move during LMR:
+				if (score > alpha)
+				{
+					// Re-search at full depth but with narrowed score bandwidth:
+					score = -negamax(-alpha - 1, -alpha, depth - 1);
+					// LMR fails:
+					if ((score > alpha) && (score < beta))
+					{
+						// Re-search at full depth and full score bandwidth:
+						score = -negamax(-beta, -alpha, depth - 1);
+					}
+				}
+			}
 		}
 		// Decrement ply:
 		ply--;
 		// Take move back:
 		restore_board();
+		// Increment the number of moves searched:
+		moves_searched++;
 		// Fail-hard beta cutoff:
 		if (score >= beta)
 		{
@@ -3059,11 +3112,11 @@ int main()
 	if (debug)
 	{
 		// Parse FEN:
-		parse_fen(cmk_position);
+		parse_fen(tricky_position);
 		// Print the board:
 		print_board();
 		// Search position:
-		search_position(6);
+		search_position(7);
 	}
 	// If debug mode is disabled:
 	else
