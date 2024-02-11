@@ -2346,11 +2346,38 @@ int killer_moves[2][64];
 // Hisotry moves [piece][square]:
 int history_moves[12][64];
 
+/*
+
+	================================
+				Triangular PV table
+	--------------------------------
+		PV line: e2e4 e7e5 g1f3 b8c6
+	================================
+
+				0    1    2    3    4    5
+
+	0    m1   m2   m3   m4   m5   m6
+
+	1    0    m2   m3   m4   m5   m6
+
+	2    0    0    m3   m4   m5   m6
+
+	3    0    0    0    m4   m5   m6
+
+	4    0    0    0    0    m5   m6
+
+	5    0    0    0    0    0    m6
+
+*/
+
+// PV length:
+int pv_length[64];
+
+// PV table:
+int pv_table[64][64];
+
 // Half move counter:
 int ply;
-
-// Best move:
-int best_move;
 
 // Score moves function:
 static inline int score_move(int move)
@@ -2550,6 +2577,8 @@ static inline int quiescence(int alpha, int beta)
 // Negamax alpha beta search:
 static inline int negamax(int alpha, int beta, int depth)
 {
+	// Initialize PV length:
+	pv_length[ply] = ply;
 	// Recursions escape condition:
 	if (depth == 0)
 	{
@@ -2570,10 +2599,6 @@ static inline int negamax(int alpha, int beta, int depth)
 	}
 	// Legal moves counter:
 	int legal_moves = 0;
-	// Best move so far:
-	int best_so_far;
-	// Old value of alpha:
-	int old_alpha = alpha;
 	// Create a move list instance:
 	moves move_list[1];
 	// Generate the moves:
@@ -2606,25 +2631,37 @@ static inline int negamax(int alpha, int beta, int depth)
 		// Fail-hard beta cutoff:
 		if (score >= beta)
 		{
-			// Store killer moves:
-			killer_moves[1][ply] = killer_moves[0][ply];
-			killer_moves[0][ply] = move_list->moves[count];
+			// On quiet moves:
+			if (get_move_capture(move_list->moves[count]) == 0)
+			{
+				// Store killer moves:
+				killer_moves[1][ply] = killer_moves[0][ply];
+				killer_moves[0][ply] = move_list->moves[count];
+			}
 			// Node (moves) fails high:
 			return beta;
 		}
 		// Found a better move:
 		if (score > alpha)
 		{
-			// Store history moves:
-			history_moves[get_move_piece(move_list->moves[count])][get_move_target(move_list->moves[count])] += depth;
+			// On quiet moves:
+			if (get_move_capture(move_list->moves[count]) == 0)
+			{
+				// Store history moves:
+				history_moves[get_move_piece(move_list->moves[count])][get_move_target(move_list->moves[count])] += depth;
+			}
 			// PV node (move):
 			alpha = score;
-			// If its a root move:
-			if (ply == 0)
+			// Write PV move:
+			pv_table[ply][ply] = move_list->moves[count];
+			// Loop over next ply line:
+			for (int next_ply = ply + 1; next_ply < pv_length[ply + 1]; next_ply++)
 			{
-				// Update the best move so far:
-				best_so_far = move_list->moves[count];
+				// Copy move from deeper ply into a current plys line:
+				pv_table[ply][next_ply] = pv_table[ply + 1][next_ply];
 			}
+			// Adjust PV length:
+			pv_length[ply] = pv_length[ply + 1];
 		}
 	}
 	// There is not any legal move to make in the current position:
@@ -2643,12 +2680,6 @@ static inline int negamax(int alpha, int beta, int depth)
 			return 0;
 		}
 	}
-	// Found a better move:
-	if (old_alpha != alpha)
-	{
-		// Initialize best move:
-		best_move = best_so_far;
-	}
 	// Node (move) fails low:
 	return alpha;
 }
@@ -2658,16 +2689,21 @@ void search_position(int depth)
 {
 	// Find the best move with a given position:
 	int score = negamax(-50000, 50000, depth);
-	// If there is a best move:
-	if (best_move)
+	// Send the score to GUI through UCI command:
+	printf("info score cp %d depth %d nodes %ld pv \n", score, depth, nodes);
+	// Loop over the moves within a PV line:
+	for (int count = 0; count < pv_length[0]; count++)
 	{
-		// Send the score to GUI through UCI command:
-		printf("info score cp %d depth %d nodes %ld\n", score, depth, nodes);
-		// Best move command:
-		printf("bestmove ");
-		print_move(best_move);
-		printf("\n");
+		// Print the move:
+		print_move(pv_table[0][count]);
+		printf(" ");
 	}
+	// Print a new line:
+	printf("\n");
+	// Best move command:
+	printf("bestmove ");
+	print_move(pv_table[0][0]);
+	printf("\n");
 }
 
 /******************************************************************************\
