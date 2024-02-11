@@ -2850,13 +2850,26 @@ void search_position(int depth)
 	memset(history_moves, 0, sizeof(history_moves));
 	memset(pv_table, 0, sizeof(pv_table));
 	memset(pv_length, 0, sizeof(pv_length));
+	// Define the initial alpha and beta window:
+	int alpha = -50000;
+	int beta = 50000;
 	// Iterative deepining:
 	for (int current_depth = 1; current_depth <= depth; current_depth++)
 	{
 		// Enable follow PV flag:
 		follow_pv = 1;
 		// Find the best move with a given position:
-		score = negamax(-50000, 50000, current_depth);
+		score = negamax(alpha, beta, current_depth);
+		// Fell outside the window, so try again with a full-width window (and the same depth):
+		if ((score <= alpha) || (score >= beta))
+		{
+			alpha = -50000;
+			beta = 50000;
+			continue;
+		}
+		// Setup the window for the next iteration:
+		alpha = score - 50;
+		beta = score + 50;
 		// Send the score to GUI through UCI command:
 		printf("info score cp %d depth %d nodes %ld pv ", score, current_depth, nodes);
 		// Loop over the moves within a PV line:
@@ -3127,7 +3140,7 @@ int main()
 	// Initialize all variables:
 	init_all();
 	// Debug mode variable:
-	int debug = 0;
+	int debug = 1;
 	// If debug mode is enabled:
 	if (debug)
 	{
