@@ -2662,6 +2662,26 @@ static inline int negamax(int alpha, int beta, int depth)
 	}
 	// Legal moves counter:
 	int legal_moves = 0;
+	// NULL move prunning:
+	if (depth >= 3 && in_check == 0 && ply)
+	{
+		// Preserve board state:
+		copy_board();
+		// Switch the side to move, literally giving the opponent an extra move:
+		side ^= 1;
+		// Reset enpassant square:
+		enpassant = no_sq;
+		// Search moves with reduced depth to find beta cutoffs:
+		int score = -negamax(-beta, -beta + 1, depth - 1 - 2);
+		// Restore the board state:
+		restore_board();
+		// Fail hard beta cutoff:
+		if (score >= beta)
+		{
+			// Nove (move) fails high:
+			return beta;
+		}
+	}
 	// Create a move list instance:
 	moves move_list[1];
 	// Generate the moves:
@@ -3107,7 +3127,7 @@ int main()
 	// Initialize all variables:
 	init_all();
 	// Debug mode variable:
-	int debug = 1;
+	int debug = 0;
 	// If debug mode is enabled:
 	if (debug)
 	{
