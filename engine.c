@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #ifdef WIN64
 #include <windows.h>
 #else
@@ -264,6 +265,169 @@ int enpassant = no_sq;
 
 // Castling rights:
 int castle;
+
+/******************************************************************************\
+=========================== TIME CONTROL VARIABLES =============================
+\******************************************************************************/
+
+// Exit from engine flag:
+int quit = 0;
+
+// UCI <movestogo> command moves counter:
+int movestogo = 30;
+
+// UCI <movetime> command time counter:
+int movetime = -1;
+
+// UCI <time> command holder (ms):
+int time = -1;
+
+// UCI <inc> commands time increment holder:
+int inc = 0;
+
+// UCI <starttime> command time holder:
+int starttime = 0;
+
+// UCI <stoptime> command time holder:
+int stoptime = 0;
+
+// Variable to flag time control availability:
+int timeset = 0;
+
+// Variable to flag when the time is up:
+int stopped = 0;
+
+/******************************************************************************\
+=========================== MISCELLANEOUS FUNCTIONS ============================
+\******************************************************************************/
+
+// Get time in miliseconds:
+int get_time_ms()
+{
+#ifdef WIN64
+	return GetTickCount();
+#else
+	struct timeval time_value;
+	gettimeofday(&time_value, NULL);
+	return time_value.tv_sec * 1000 + time_value.tv_usec / 1000;
+#endif
+}
+
+/*
+
+	Function to "listen" to GUI's input during search.
+	It's waiting for the user input from STDIN.
+	OS dependent.
+
+	First Richard Allbert aka BluefeverSoftware grabbed it from somewhere...
+	And then Code Monkey King has grabbed it from VICE)
+
+*/
+
+int input_waiting()
+{
+#ifndef WIN32
+	fd_set readfds;
+	struct timeval tv;
+	FD_ZERO(&readfds);
+	FD_SET(fileno(stdin), &readfds);
+	tv.tv_sec = 0;
+	tv.tv_usec = 0;
+	select(16, &readfds, 0, 0, &tv);
+
+	return (FD_ISSET(fileno(stdin), &readfds));
+#else
+	static int init = 0, pipe;
+	static HANDLE inh;
+	DWORD dw;
+
+	if (!init)
+	{
+		init = 1;
+		inh = GetStdHandle(STD_INPUT_HANDLE);
+		pipe = !GetConsoleMode(inh, &dw);
+		if (!pipe)
+		{
+			SetConsoleMode(inh, dw & ~(ENABLE_MOUSE_INPUT | ENABLE_WINDOW_INPUT));
+			FlushConsoleInputBuffer(inh);
+		}
+	}
+
+	if (pipe)
+	{
+		if (!PeekNamedPipe(inh, NULL, 0, NULL, &dw, NULL))
+			return 1;
+		return dw;
+	}
+
+	else
+	{
+		GetNumberOfConsoleInputEvents(inh, &dw);
+		return dw <= 1 ? 0 : dw;
+	}
+
+#endif
+}
+
+// Read user/GUI input:
+void read_input()
+{
+	// Bytes to read holder:
+	int bytes;
+	// User/GUI input:
+	char input[256] = "", *endc;
+	// "Listen" to STDIN:
+	if (input_waiting())
+	{
+		// Tell engine to stop calculating:
+		stopped = 1;
+		// Loop to read bytes from STDIN:
+		do
+		{
+			// Read bytes from STDIN:
+			bytes = read(fileno(stdin), input, 256);
+		}
+		// Until bytes available:
+		while (bytes < 0);
+		// Searches for the first occurrence of '\n':
+		endc = strchr(input, '\n');
+		// If found new line:
+		if (endc)
+		{
+			// Set value at pointer to 0:
+			*endc = 0;
+		}
+		// If input is available:
+		if (strlen(input) > 0)
+		{
+			// Match UCI <quit> command:
+			if (!strncmp(input, "quit", 4))
+			{
+				// Tell engine to terminate exacution:
+				quit = 1;
+			}
+			// Match UCI <stop> command:
+			else if (!strncmp(input, "stop", 4))
+			{
+				// Tell engine to terminate exacution:
+				quit = 1;
+			}
+		}
+	}
+}
+
+// A bridge function to interact between search and GUI input:
+static void communicate()
+{
+	// If time is up break here:
+	if (timeset == 1 && get_time_ms() > stoptime)
+	{
+		// Tell engine to stop calculating:
+		stopped = 1;
+	}
+	// Read GUI input:
+	read_input();
+}
 
 /******************************************************************************\
 =============================== RANDOM NUMBERS =================================
@@ -2054,18 +2218,6 @@ static inline void generate_moves(moves *move_list)
 =================================== PERFT =====================================
 \******************************************************************************/
 
-// Get time in miliseconds:
-int get_time_ms()
-{
-#ifdef WIN64
-	return GetTickCount();
-#else
-	struct timeval time_value;
-	gettimeofday(&time_value, NULL);
-	return time_value.tv_sec * 1000 + time_value.tv_usec / 1000;
-#endif
-}
-
 // Leaf nodes (number of positions reached during the test of the moves generator at a given depth):
 long nodes;
 
@@ -2566,6 +2718,12 @@ static inline int sort_moves(moves *move_list)
 // Quiescence serach:
 static inline int quiescence(int alpha, int beta)
 {
+	// Every 2047 nodes:
+	if ((nodes & 2047) == 0)
+	{
+		// "Listen" to the GUI/user input:
+		communicate();
+	}
 	// Increment nodes count:
 	nodes++;
 	// Evaluate position:
@@ -2609,6 +2767,12 @@ static inline int quiescence(int alpha, int beta)
 		ply--;
 		// Take move back:
 		restore_board();
+		// If time is up:
+		if (stopped == 1)
+		{
+			// Just return zero:
+			return 0;
+		}
 		// Fail-hard beta cutoff:
 		if (score >= beta)
 		{
@@ -2632,6 +2796,12 @@ const int reduction_limit = 3;
 // Negamax alpha beta search:
 static inline int negamax(int alpha, int beta, int depth)
 {
+	// Every 2047 nodes:
+	if ((nodes & 2047) == 0)
+	{
+		// "Listen" to the GUI/user input:
+		communicate();
+	}
 	// Initialize PV length:
 	pv_length[ply] = ply;
 	// Recursions escape condition:
@@ -2673,6 +2843,12 @@ static inline int negamax(int alpha, int beta, int depth)
 		int score = -negamax(-beta, -beta + 1, depth - 1 - 2);
 		// Restore the board state:
 		restore_board();
+		// If time is up:
+		if (stopped == 1)
+		{
+			// Just return zero:
+			return 0;
+		}
 		// Fail hard beta cutoff:
 		if (score >= beta)
 		{
@@ -2757,6 +2933,12 @@ static inline int negamax(int alpha, int beta, int depth)
 		ply--;
 		// Take move back:
 		restore_board();
+		// If time is up:
+		if (stopped == 1)
+		{
+			// Just return zero:
+			return 0;
+		}
 		// Increment the number of moves searched:
 		moves_searched++;
 		// Fail-hard beta cutoff:
@@ -2822,6 +3004,8 @@ void search_position(int depth)
 	int score = 0;
 	// Reset nodes counter:
 	nodes = 0;
+	// Reset "time is up" flag:
+	stopped = 0;
 	// Reset PV flags:
 	follow_pv = 0;
 	score_pv = 0;
@@ -2836,6 +3020,12 @@ void search_position(int depth)
 	// Iterative deepining:
 	for (int current_depth = 1; current_depth <= depth; current_depth++)
 	{
+		// If time is up:
+		if (stopped == 1)
+		{
+			// Stop calculating and return the best move so far:
+			break;
+		}
 		// Enable follow PV flag:
 		follow_pv = 1;
 		// Find the best move with a given position:
@@ -2999,21 +3189,86 @@ void parse_position(char *command)
 // Parse UCI <go> command:
 void parse_go(char *command)
 {
-	// Initialize depth:
+	// Init parameters:
 	int depth = -1;
-	// Initialize char pointer to the current depth argument:
-	char *current_depth = NULL;
-	// Handle fixed depth search:
-	if (current_depth = strstr(command, "depth"))
+	// Init argument:
+	char *argument = NULL;
+	// Infinite search:
+	if ((argument = strstr(command, "infinite")))
 	{
-		// Convert string to integer:
-		depth = atoi(current_depth + 6);
 	}
-	// Diferent time controls placeholder:
-	else
+	// Match UCI <binc> command:
+	if ((argument = strstr(command, "binc")) && side == black)
 	{
-		depth = 6;
+		// Parse black time increment:
+		inc = atoi(argument + 5);
 	}
+	// Match UCI <winc> command:
+	if ((argument = strstr(command, "winc")) && side == white)
+	{
+		// Parse white time increment:
+		inc = atoi(argument + 5);
+	}
+	// Match UCI <wtime> command:
+	if ((argument = strstr(command, "wtime")) && side == white)
+	{
+		// Parse white time limit:
+		time = atoi(argument + 6);
+	}
+	// Match UCI <btime> command:
+	if ((argument = strstr(command, "btime")) && side == black)
+	{
+		// Parse black time limit:
+		time = atoi(argument + 6);
+	}
+	// Match UCI <movestogo> command:
+	if ((argument = strstr(command, "movestogo")))
+	{
+		// Parse number of moves to go:
+		movestogo = atoi(argument + 10);
+	}
+	// Match UCI <movetime> command:
+	if ((argument = strstr(command, "movetime")))
+	{
+		// Parse amount of time allowed to spend to make a move:
+		movetime = atoi(argument + 9);
+	}
+	// Match UCI <depth> command:
+	if ((argument = strstr(command, "depth")))
+	{
+		// Parse search depth:
+		depth = atoi(argument + 6);
+	}
+	// If move time is not available:
+	if (movetime != -1)
+	{
+		// Set time equal to move time:
+		time = movetime;
+		// Set moves to go to 1:
+		movestogo = 1;
+	}
+	// Initializate start time:
+	starttime = get_time_ms();
+	// Initializate search depth:
+	depth = depth;
+	// If time control is available:
+	if (time != -1)
+	{
+		// Flag we're playing with time control:
+		timeset = 1;
+		// Set up timing:
+		time /= movestogo;
+		time -= 50;
+		stoptime = starttime + time + inc;
+	}
+	// If depth is not available:
+	if (depth == -1)
+	{
+		// Set depth to 64 plies (takes ages to complete...):
+		depth = 64;
+	}
+	// Print debug info:
+	printf("time:%d start:%d stop:%d depth:%d timeset:%d\n", time, starttime, stoptime, depth, timeset);
 	// Search position:
 	search_position(depth);
 }
@@ -3120,7 +3375,7 @@ int main()
 	// Initialize all variables:
 	init_all();
 	// Debug mode variable:
-	int debug = 1;
+	int debug = 0;
 	// If debug mode is enabled:
 	if (debug)
 	{
