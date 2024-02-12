@@ -514,6 +514,53 @@ static inline int get_ls1b_index(U64 bitboard)
 }
 
 /******************************************************************************\
+================================ ZOBRIST KEYS ==================================
+\******************************************************************************/
+
+// Random piece keys [piece][square]:
+U64 piece_keys[12][64];
+
+// Random enpassant keys [square]:
+U64 enpassant_keys[64];
+
+// Random castling keys:
+U64 castle_keys[16];
+
+// Random side key:
+U64 side_key;
+
+// Initializate random hash keys:
+void init_random_keys()
+{
+	// Update pseudo random number state:
+	random_state = 1804289383;
+	// Loop over piece codes:
+	for (int piece = P; piece <= k; piece++)
+	{
+		// Loop over board squares:
+		for (int square = 0; square < 64; square++)
+		{
+			// Initialiazte random piece keys:
+			piece_keys[piece][square] = get_random_U64_number();
+		}
+	}
+	// Loop over board squares:
+	for (int square = 0; square < 64; square++)
+	{
+		// Initializate random enpassant keys:
+		enpassant_keys[square] = get_random_U64_number();
+	}
+	// Loop over castling keys:
+	for (int index = 0; index < 16; index++)
+	{
+		// Initializate castling keys:
+		castle_keys[index] = get_random_U64_number();
+	}
+	// Initializate random side key:
+	side_key = get_random_U64_number();
+}
+
+/******************************************************************************\
 ============================== INPUT AND OUTPUT ================================
 \******************************************************************************/
 
@@ -3364,6 +3411,8 @@ void init_all()
 	init_magic_numbers();
 	print_magic_numbers();
 	*/
+	// Initialize random keys for hashing purposes:
+	init_random_keys();
 }
 
 /******************************************************************************\
@@ -3375,7 +3424,7 @@ int main()
 	// Initialize all variables:
 	init_all();
 	// Debug mode variable:
-	int debug = 0;
+	int debug = 1;
 	// If debug mode is enabled:
 	if (debug)
 	{
