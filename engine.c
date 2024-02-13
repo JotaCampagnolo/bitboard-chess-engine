@@ -2753,6 +2753,44 @@ int follow_pv, score_pv;
 // Half move counter:
 int ply;
 
+/******************************************************************************\
+============================ TRANSPOSITION TABLE ===============================
+\******************************************************************************/
+
+// Hash table size:
+#define hash_size 0x400000
+
+// Transposition table hash flags:
+#define hash_flag_exact 0
+#define hash_flag_alpha 1
+#define hash_flag_beta 2
+
+// Transposition table data structure:
+typedef struct
+{
+	U64 hash_key;
+	int depth;
+	int flag;
+	int score;
+} tt;
+
+// Define transposition table instance:
+tt hash_table[hash_size];
+
+// Clear the transposition table:
+void clear_hash_table()
+{
+	// Loop over TT elements:
+	for (int index = 0; index < hash_size; index++)
+	{
+		// Initializate all the properties:
+		hash_table[index].hash_key = 0;
+		hash_table[index].depth = 0;
+		hash_table[index].flag = 0;
+		hash_table[index].score = 0;
+	}
+}
+
 // Enable PV move scoring:
 static inline void enable_pv_scoring(moves *move_list)
 {
@@ -3601,10 +3639,10 @@ int main()
 		parse_fen(tricky_position);
 		// Print the board:
 		print_board();
+		// Clear transposition table:
+		clear_hash_table();
 		// Search position:
-		// search_position(8);
-		// Perform a perft test:
-		perft_test(5);
+		search_position(8);
 	}
 	// If debug mode is disabled:
 	else
