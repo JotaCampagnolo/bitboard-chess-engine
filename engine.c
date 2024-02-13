@@ -1718,18 +1718,20 @@ void print_move_list(moves *move_list)
 }
 
 // Preserve board state:
-#define copy_board()                           \
-	U64 bitboards_copy[12], occupancies_copy[3]; \
-	int side_copy, enpassant_copy, castle_copy;  \
-	memcpy(bitboards_copy, bitboards, 96);       \
-	memcpy(occupancies_copy, occupancies, 24);   \
-	side_copy = side, enpassant_copy = enpassant, castle_copy = castle;
+#define copy_board()                                                  \
+	U64 bitboards_copy[12], occupancies_copy[3];                        \
+	int side_copy, enpassant_copy, castle_copy;                         \
+	memcpy(bitboards_copy, bitboards, 96);                              \
+	memcpy(occupancies_copy, occupancies, 24);                          \
+	side_copy = side, enpassant_copy = enpassant, castle_copy = castle; \
+	U64 hash_key_copy = hash_key;
 
 // Restore board state:
-#define restore_board()                      \
-	memcpy(bitboards, bitboards_copy, 96);     \
-	memcpy(occupancies, occupancies_copy, 24); \
-	side = side_copy, enpassant = enpassant_copy, castle = castle_copy;
+#define restore_board()                                               \
+	memcpy(bitboards, bitboards_copy, 96);                              \
+	memcpy(occupancies, occupancies_copy, 24);                          \
+	side = side_copy, enpassant = enpassant_copy, castle = castle_copy; \
+	hash_key = hash_key_copy;
 
 // Move types:
 enum
@@ -1785,6 +1787,9 @@ static inline int make_move(int move, int move_flag)
 		// Move the piece:
 		pop_bit(bitboards[piece], source_square);
 		set_bit(bitboards[piece], target_square);
+		// Hash piece:
+		hash_key ^= piece_keys[piece][source_square]; // Remove the piece from source square in hash key.
+		hash_key ^= piece_keys[piece][target_square]; // Place the piece on target square in hash key.
 		// Handling capture moves:
 		if (capture_flag)
 		{
@@ -1810,6 +1815,8 @@ static inline int make_move(int move, int move_flag)
 				{
 					// Pop the piece from the bitboard:
 					pop_bit(bitboards[bb_piece], target_square);
+					// Remove the piece from hash key:
+					hash_key ^= piece_keys[bb_piece][target_square];
 					break;
 				}
 			}
@@ -1817,24 +1824,73 @@ static inline int make_move(int move, int move_flag)
 		// Handling pawn promotions:
 		if (promoted)
 		{
-			// Erase the pawn from the target square:
-			pop_bit(bitboards[(side == white) ? P : p], target_square);
+			// White to move:
+			if (side == white)
+			{
+				// Erase the pawn from the target square:
+				pop_bit(bitboards[P], target_square);
+				// Remove the pawn from hash key:
+				hash_key ^= piece_keys[P][target_square];
+			}
+			// Black to move:
+			else
+			{
+				// Erase the pawn from the target square:
+				pop_bit(bitboards[p], target_square);
+				// Remove the pawn from hash key:
+				hash_key ^= piece_keys[p][target_square];
+			}
 			// Set up promoted piece on chess board:
 			set_bit(bitboards[promoted], target_square);
+			// Hash the promoted piece:
+			hash_key ^= piece_keys[promoted][target_square];
 		}
 		// Handling enpassant captures:
 		if (enpassant_flag)
 		{
-			// Erase the pawn depending on side to move:
-			(side == white) ? pop_bit(bitboards[p], target_square + 8) : pop_bit(bitboards[P], target_square - 8);
+			// White to move:
+			if (side == white)
+			{
+				// Remove captured pawn:
+				pop_bit(bitboards[p], target_square + 8);
+				// Remove pawn from the hash key:
+				hash_key ^= piece_keys[p][target_square + 8];
+			}
+			// Black to move:
+			else
+			{
+				// Remove captured pawn:
+				pop_bit(bitboards[P], target_square - 8);
+				// Remove pawn from the hash key:
+				hash_key ^= piece_keys[P][target_square - 8];
+			}
+		}
+		// Hash enpassant if available (remove enpassant square from hash key):
+		if (enpassant != no_sq)
+		{
+			hash_key ^= enpassant_keys[enpassant];
 		}
 		// Reseting the enpassant square:
 		enpassant = no_sq;
 		// Handling double pawn push:
 		if (double_flag)
 		{
-			// Set the enpassant square depending on side to move:
-			(side == white) ? (enpassant = target_square + 8) : (enpassant = target_square - 8);
+			// White to move:
+			if (side == white)
+			{
+				// Set the enpassant square:
+				enpassant = target_square + 8;
+				// Hash enpassant:
+				hash_key ^= enpassant_keys[target_square + 8];
+			}
+			// Black to move:
+			else
+			{
+				// Set the enpassant square:
+				enpassant = target_square - 8;
+				// Hash enpassant:
+				hash_key ^= enpassant_keys[target_square - 8];
+			}
 		}
 		// Handling the castling moves:
 		if (castling_flag)
@@ -1847,30 +1903,46 @@ static inline int make_move(int move, int move_flag)
 				// Move the H rook:
 				pop_bit(bitboards[R], h1);
 				set_bit(bitboards[R], f1);
+				// Hash rook:
+				hash_key ^= piece_keys[R][h1]; // Remove rook from h1 of the hash key.
+				hash_key ^= piece_keys[R][f1]; // Place rook on f1 in the hash key.
 				break;
 			// White castles queen side:
 			case (c1):
 				// Move the H rook:
 				pop_bit(bitboards[R], a1);
 				set_bit(bitboards[R], d1);
+				// Hash rook:
+				hash_key ^= piece_keys[R][a1]; // Remove rook from a1 of the hash key.
+				hash_key ^= piece_keys[R][d1]; // Place rook on d1 in the hash key.
 				break;
 			// Black castles king side:
 			case (g8):
 				// Move the H rook:
 				pop_bit(bitboards[r], h8);
 				set_bit(bitboards[r], f8);
+				// Hash rook:
+				hash_key ^= piece_keys[r][h8]; // Remove rook from h8 of the hash key.
+				hash_key ^= piece_keys[r][f8]; // Place rook on f8 in the hash key.
 				break;
 			// Black castles queen side:
 			case (c8):
 				// Move the H rook:
 				pop_bit(bitboards[r], a8);
 				set_bit(bitboards[r], d8);
+				// Hash rook:
+				hash_key ^= piece_keys[r][a8]; // Remove rook from a8 of the hash key.
+				hash_key ^= piece_keys[r][d8]; // Place rook on d8 in the hash key.
 				break;
 			}
 		}
+		// Un-hash castling:
+		hash_key ^= castle_keys[castle];
 		// Update castling rights:
 		castle &= castling_rights[source_square];
 		castle &= castling_rights[target_square];
+		// Hash castling again:
+		hash_key ^= castle_keys[castle];
 		// Reset occupancies:
 		memset(occupancies, 0ULL, 24);
 		// Loop over white pieces bitboards:
@@ -1890,6 +1962,32 @@ static inline int make_move(int move, int move_flag)
 		occupancies[both] |= occupancies[black];
 		// Change side to move:
 		side ^= 1;
+
+		// Hash side:
+		hash_key ^= side_key;
+
+		/*******************************************************************\
+		================ DEBUG HASH KEY INCREMENTAL UPDATES =================
+		\*******************************************************************/
+		/*
+		// Build hash key for the updated position (after move is made) from scratch:
+		U64 hash_from_scratch = generate_hash_key();
+		// In case the built hash key from scratch does not match
+		// the one that was incrementally updated we interrupt execution:
+		if (hash_key != hash_from_scratch)
+		{
+			// Print the board:
+			print_board();
+			// Print the code area:
+			printf("Make move:\n");
+			// Print the move:
+			printf("Move: ");
+			print_move(move);
+			// Print the desired hash key:
+			printf("\nHash key should be: %llx\n", hash_from_scratch);
+			getchar();
+		}
+		*/
 		// Make sure that the king was not exposed to a check:
 		if (is_square_attacked((side == white) ? get_ls1b_index(bitboards[k]) : get_ls1b_index(bitboards[K]), side))
 		{
@@ -2344,6 +2442,29 @@ static inline void perft_driver(int depth)
 		perft_driver(depth - 1);
 		// Restore the board:
 		restore_board();
+
+		/*******************************************************************\
+		================ DEBUG HASH KEY INCREMENTAL UPDATES =================
+		\*******************************************************************/
+		/*
+		// Build hash key for the updated position (after move is made) from scratch:
+		U64 hash_from_scratch = generate_hash_key();
+		// In case the built hash key from scratch does not match
+		// the one that was incrementally updated we interrupt execution:
+		if (hash_key != hash_from_scratch)
+		{
+			// Print the board:
+			print_board();
+			// Print the code area:
+			printf("Take move back:\n");
+			// Print the move:
+			printf("Move: ");
+			print_move(move_list->moves[move_count]);
+			// Print the desired hash key:
+			printf("\nHash key should be: %llx\n", hash_from_scratch);
+			getchar();
+		}
+		*/
 	}
 }
 
@@ -3481,7 +3602,9 @@ int main()
 		// Print the board:
 		print_board();
 		// Search position:
-		search_position(7);
+		// search_position(8);
+		// Perform a perft test:
+		perft_test(5);
 	}
 	// If debug mode is disabled:
 	else
