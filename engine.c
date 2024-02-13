@@ -266,6 +266,9 @@ int enpassant = no_sq;
 // Castling rights:
 int castle;
 
+// "Almost" unique position identifier (aka hash key or position key):
+U64 hash_key;
+
 /******************************************************************************\
 =========================== TIME CONTROL VARIABLES =============================
 \******************************************************************************/
@@ -560,6 +563,46 @@ void init_random_keys()
 	side_key = get_random_U64_number();
 }
 
+// Generate "almost" unique position identifier (aka hash key) from scratch:
+U64 generate_hash_key()
+{
+	// Final hash key:
+	U64 final_key = 0ULL;
+	// Temporary piece bitboard copy:
+	U64 bitboard;
+	// Loop over pieces bitboards:
+	for (int piece = P; piece <= k; piece++)
+	{
+		// Initialize piece bitboard copy:
+		bitboard = bitboards[piece];
+		// Loop over the piece within a given bitboard:
+		while (bitboard)
+		{
+			// Initialize square occupied by the piece:
+			int square = get_ls1b_index(bitboard);
+			// Hash piece:
+			final_key ^= piece_keys[piece][square];
+			// Pop the LS1B:
+			pop_bit(bitboard, square);
+		}
+	}
+	// If enpassant square is available:
+	if (enpassant != no_sq)
+	{
+		// Hash enpassant:
+		final_key ^= enpassant_keys[enpassant];
+	}
+	// Hash the castling rights:
+	final_key ^= castle_keys[castle];
+	// Hash the side only if its black turn:
+	if (side == black)
+	{
+		final_key ^= side_key;
+	}
+	// Return the generated hash key:
+	return final_key;
+}
+
 /******************************************************************************\
 ============================== INPUT AND OUTPUT ================================
 \******************************************************************************/
@@ -724,6 +767,9 @@ void print_board()
 	(castle & wk) ? printf("\033[0;32m%c\033[0;30m", '@') : printf("%c", '-');
 	printf("-+   |\n");
 	printf("|     \e[0ma   b   c   d   e   f   g   h\033[0;30m     |\n");
+	printf("+---------------------------------------+\n");
+	// Print the hash key:
+	printf("| \033[0;33mHash key: \033[0;32m%27llx \033[0;30m|\n", hash_key);
 	printf("+---------------------------------------+\e[0m\n\n");
 }
 
@@ -853,6 +899,8 @@ void parse_fen(char *fen)
 	// Populate both occupancy bitboard:
 	occupancies[both] |= occupancies[white];
 	occupancies[both] |= occupancies[black];
+	// Initialize hash key:
+	hash_key = generate_hash_key();
 }
 
 /******************************************************************************\
