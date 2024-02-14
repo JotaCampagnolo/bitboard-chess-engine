@@ -2760,6 +2760,9 @@ int ply;
 // Hash table size:
 #define hash_size 0x400000
 
+// No hash entry found constant:
+#define no_hash_entry 100000
+
 // Transposition table hash flags:
 #define hash_flag_exact 0
 #define hash_flag_alpha 1
@@ -2788,6 +2791,61 @@ void clear_hash_table()
 		hash_table[index].depth = 0;
 		hash_table[index].flag = 0;
 		hash_table[index].score = 0;
+	}
+}
+
+// Write hash entry data:
+static inline void write_hash_entry(int score, int depth, int hash_flag)
+{
+	/* Create a TT instance pointer to the hash entry
+	responsible for storing a particular hash entry
+	scoring data for the current board position if available:	*/
+	tt *hash_entry = &hash_table[hash_key % hash_size];
+	// Fill the hash entry data:
+	hash_entry->hash_key = hash_key;
+	hash_entry->score = score;
+	hash_entry->flag = hash_flag;
+	hash_entry->depth = depth;
+}
+
+// Read hash entry data:
+static inline int read_hash_entry(int alpha, int beta, int depth)
+{
+	/* Create a TT instance pointer to the hash entry
+	responsible for storing a particular hash entry
+	scoring data for the current board position if available:	*/
+	tt *hash_entry = &hash_table[hash_key % hash_size];
+	// Make sure dealing with the exact position on the board:
+	if (hash_entry->hash_key == hash_key)
+	{
+		// Make sure the depth matches exactly:
+		if (hash_entry->depth >= depth)
+		{
+			// Match the exact (PV node) score:
+			if (hash_entry->flag == hash_flag_exact)
+			{
+				// Return the exact (PV node) score:
+				return hash_entry->score;
+			}
+			// Match the alpha (fail-low node) score:
+			if ((hash_entry->flag == hash_flag_alpha) && (hash_entry->score <= alpha))
+			{
+				// Return the alpha (fail-low node) score:
+				return alpha;
+			}
+			// Match the beta (fail-high node) score:
+			if ((hash_entry->flag == hash_flag_beta) && (hash_entry->score >= beta))
+			{
+				// Return the beta (fail-high node) score:
+				return beta;
+			}
+		}
+	}
+	// Hash entry does not exist:
+	else
+	{
+		// Return the unkown value:
+		return no_hash_entry;
 	}
 }
 
@@ -3636,11 +3694,17 @@ int main()
 	if (debug)
 	{
 		// Parse FEN:
-		parse_fen(tricky_position);
+		parse_fen(start_position);
 		// Print the board:
 		print_board();
 		// Clear transposition table:
 		clear_hash_table();
+		// Write an example entry:
+		write_hash_entry(25, 1, hash_flag_exact);
+		// Read the score from example entry:
+		int score = read_hash_entry(19, 30, 1);
+		// Print the hashed score:
+		printf("Score: %d\n", score);
 		// Search position:
 		search_position(8);
 	}
