@@ -3034,6 +3034,7 @@ static inline int quiescence(int alpha, int beta)
 	}
 	// Increment nodes count:
 	nodes++;
+	//
 	// Evaluate position:
 	int evaluation = evaluate();
 	// Fail-hard beta cutoff:
@@ -3081,17 +3082,17 @@ static inline int quiescence(int alpha, int beta)
 			// Just return zero:
 			return 0;
 		}
-		// Fail-hard beta cutoff:
-		if (score >= beta)
-		{
-			// Node (moves) fails high:
-			return beta;
-		}
 		// Found a better move:
 		if (score > alpha)
 		{
 			// PV node (move):
 			alpha = score;
+			// Fail-hard beta cutoff:
+			if (score >= beta)
+			{
+				// Node (moves) fails high:
+				return beta;
+			}
 		}
 	}
 	// Node (move) fails low:
@@ -3109,7 +3110,7 @@ static inline int negamax(int alpha, int beta, int depth)
 	// Define the hash flag:
 	int hash_flag = hash_flag_alpha;
 	// Reading the hash entry:
-	if ((score = read_hash_entry(alpha, beta, depth)) != no_hash_entry)
+	if (ply && (score = read_hash_entry(alpha, beta, depth)) != no_hash_entry)
 	{
 		// The move has already been searched (hence has a value)
 		// then return the score withou searching again:
@@ -3154,6 +3155,8 @@ static inline int negamax(int alpha, int beta, int depth)
 	{
 		// Preserve board state:
 		copy_board();
+		// Increment ply:
+		ply++;
 		// Hash enpassant if available:
 		if (enpassant != no_sq)
 		{
@@ -3167,6 +3170,8 @@ static inline int negamax(int alpha, int beta, int depth)
 		hash_key ^= side_key;
 		// Search moves with reduced depth to find beta cutoffs:
 		score = -negamax(-beta, -beta + 1, depth - 1 - 2);
+		// Decrement ply:
+		ply--;
 		// Restore the board state:
 		restore_board();
 		// If time is up:
@@ -3265,21 +3270,6 @@ static inline int negamax(int alpha, int beta, int depth)
 		}
 		// Increment the number of moves searched:
 		moves_searched++;
-		// Fail-hard beta cutoff:
-		if (score >= beta)
-		{
-			// Store hash entry with the score equal to beta:
-			write_hash_entry(beta, depth, hash_flag_beta);
-			// On quiet moves:
-			if (get_move_capture(move_list->moves[count]) == 0)
-			{
-				// Store killer moves:
-				killer_moves[1][ply] = killer_moves[0][ply];
-				killer_moves[0][ply] = move_list->moves[count];
-			}
-			// Node (moves) fails high:
-			return beta;
-		}
 		// Found a better move:
 		if (score > alpha)
 		{
@@ -3304,6 +3294,21 @@ static inline int negamax(int alpha, int beta, int depth)
 			}
 			// Adjust PV length:
 			pv_length[ply] = pv_length[ply + 1];
+			// Fail-hard beta cutoff:
+			if (score >= beta)
+			{
+				// Store hash entry with the score equal to beta:
+				write_hash_entry(beta, depth, hash_flag_beta);
+				// On quiet moves:
+				if (get_move_capture(move_list->moves[count]) == 0)
+				{
+					// Store killer moves:
+					killer_moves[1][ply] = killer_moves[0][ply];
+					killer_moves[0][ply] = move_list->moves[count];
+				}
+				// Node (moves) fails high:
+				return beta;
+			}
 		}
 	}
 	// There is not any legal move to make in the current position:
@@ -3345,8 +3350,6 @@ void search_position(int depth)
 	memset(history_moves, 0, sizeof(history_moves));
 	memset(pv_table, 0, sizeof(pv_table));
 	memset(pv_length, 0, sizeof(pv_length));
-	// Clear hash table:
-	clear_hash_table();
 	// Define the initial alpha and beta window:
 	int alpha = -50000;
 	int beta = 50000;
@@ -3656,6 +3659,8 @@ void uci_loop()
 		{
 			// Call parse position function:
 			parse_position("position startpos");
+			// Clear hash table:
+			clear_hash_table();
 		}
 		// Parse UCI <go> command:
 		else if (strncmp(input, "go", 2) == 0)
@@ -3699,6 +3704,8 @@ void init_all()
 	*/
 	// Initialize random keys for hashing purposes:
 	init_random_keys();
+	// Clear hash table:
+	clear_hash_table();
 }
 
 /******************************************************************************\
@@ -3715,11 +3722,11 @@ int main()
 	if (debug)
 	{
 		// Parse FEN:
-		parse_fen(tricky_position);
+		parse_fen(start_position);
 		// Print the board:
 		print_board();
 		// Search position:
-		search_position(7);
+		search_position(10);
 	}
 	// If debug mode is disabled:
 	else
