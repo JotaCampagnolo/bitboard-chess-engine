@@ -3154,10 +3154,17 @@ static inline int negamax(int alpha, int beta, int depth)
 	{
 		// Preserve board state:
 		copy_board();
-		// Switch the side to move, literally giving the opponent an extra move:
-		side ^= 1;
+		// Hash enpassant if available:
+		if (enpassant != no_sq)
+		{
+			hash_key ^= enpassant_keys[enpassant];
+		}
 		// Reset enpassant square:
 		enpassant = no_sq;
+		// Switch the side to move, literally giving the opponent an extra move:
+		side ^= 1;
+		// Hash the side:
+		hash_key ^= side_key;
 		// Search moves with reduced depth to find beta cutoffs:
 		score = -negamax(-beta, -beta + 1, depth - 1 - 2);
 		// Restore the board state:
@@ -3338,6 +3345,8 @@ void search_position(int depth)
 	memset(history_moves, 0, sizeof(history_moves));
 	memset(pv_table, 0, sizeof(pv_table));
 	memset(pv_length, 0, sizeof(pv_length));
+	// Clear hash table:
+	clear_hash_table();
 	// Define the initial alpha and beta window:
 	int alpha = -50000;
 	int beta = 50000;
