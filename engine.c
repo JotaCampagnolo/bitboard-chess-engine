@@ -2679,6 +2679,18 @@ static inline int evaluate()
 
 /*
 
+	Score layout:
+	[-infinity, -mate_value ... -mate_score ... score ... mate_score ... mate_value, infinity]
+
+*/
+
+// Score bounds for the range of matting scores:
+#define infinity 50000
+#define mate_value 49000
+#define mate_score 48000
+
+/*
+
 	Most valuable VICTIM & less valuable ATTACKER:
 
 		(Victims) Pawn Knight Bishop   Rook  Queen   King
@@ -2801,6 +2813,16 @@ static inline void write_hash_entry(int score, int depth, int hash_flag)
 	responsible for storing a particular hash entry
 	scoring data for the current board position if available:	*/
 	tt *hash_entry = &hash_table[hash_key % hash_size];
+	// Store score independent from the actual path from
+	// root node (position) to current node (position):
+	if (score < -mate_score)
+	{
+		score -= ply;
+	}
+	if (score > mate_score)
+	{
+		score += ply;
+	}
 	// Fill the hash entry data:
 	hash_entry->hash_key = hash_key;
 	hash_entry->score = score;
@@ -2821,20 +2843,32 @@ static inline int read_hash_entry(int alpha, int beta, int depth)
 		// Make sure the depth matches exactly:
 		if (hash_entry->depth >= depth)
 		{
+			// Extract stored score from TT entry:
+			int score = hash_entry->score;
+			// Retrieve score independent from the actual path from
+			// root node (position) to current node (position):
+			if (score < -mate_score)
+			{
+				score += ply;
+			}
+			if (score > mate_score)
+			{
+				score -= ply;
+			}
 			// Match the exact (PV node) score:
 			if (hash_entry->flag == hash_flag_exact)
 			{
 				// Return the exact (PV node) score:
-				return hash_entry->score;
+				return score;
 			}
 			// Match the alpha (fail-low node) score:
-			if ((hash_entry->flag == hash_flag_alpha) && (hash_entry->score <= alpha))
+			if ((hash_entry->flag == hash_flag_alpha) && (score <= alpha))
 			{
 				// Return the alpha (fail-low node) score:
 				return alpha;
 			}
 			// Match the beta (fail-high node) score:
-			if ((hash_entry->flag == hash_flag_beta) && (hash_entry->score >= beta))
+			if ((hash_entry->flag == hash_flag_beta) && (score >= beta))
 			{
 				// Return the beta (fail-high node) score:
 				return beta;
@@ -3318,7 +3352,7 @@ static inline int negamax(int alpha, int beta, int depth)
 		if (in_check)
 		{
 			// Return mating score (assuming closest distance to mate):
-			return -49000 + ply;
+			return -mate_value + ply;
 		}
 		// King is not in check:
 		else
@@ -3351,8 +3385,8 @@ void search_position(int depth)
 	memset(pv_table, 0, sizeof(pv_table));
 	memset(pv_length, 0, sizeof(pv_length));
 	// Define the initial alpha and beta window:
-	int alpha = -50000;
-	int beta = 50000;
+	int alpha = -infinity;
+	int beta = infinity;
 	// Iterative deepining:
 	for (int current_depth = 1; current_depth <= depth; current_depth++)
 	{
@@ -3369,8 +3403,8 @@ void search_position(int depth)
 		// Fell outside the window, so try again with a full-width window (and the same depth):
 		if ((score <= alpha) || (score >= beta))
 		{
-			alpha = -50000;
-			beta = 50000;
+			alpha = -infinity;
+			beta = infinity;
 			continue;
 		}
 		// Setup the window for the next iteration:
