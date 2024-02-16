@@ -3143,8 +3143,10 @@ static inline int negamax(int alpha, int beta, int depth)
 	int score;
 	// Define the hash flag:
 	int hash_flag = hash_flag_alpha;
-	// Reading the hash entry:
-	if (ply && (score = read_hash_entry(alpha, beta, depth)) != no_hash_entry)
+	// A hack from Pedro Catro to figure out if the current node is a PV node or not:
+	int pv_node = beta - alpha > 1;
+	// Reading the hash entry when not a root ply and not a PV node:
+	if (ply && (score = read_hash_entry(alpha, beta, depth)) != no_hash_entry && pv_node == 0)
 	{
 		// The move has already been searched (hence has a value)
 		// then return the score withou searching again:
@@ -3410,8 +3412,20 @@ void search_position(int depth)
 		// Setup the window for the next iteration:
 		alpha = score - 50;
 		beta = score + 50;
+
 		// Send the score to GUI through UCI command:
-		printf("info score cp %d depth %d nodes %ld time %d pv ", score, current_depth, nodes, get_time_ms() - starttime);
+		if (score > -mate_value && score < -mate_score)
+		{
+			printf("info score mate %d depth %d nodes %ld time %d pv ", -(score + mate_value) / 2 - 1, current_depth, nodes, get_time_ms() - starttime);
+		}
+		else if (score > mate_score && score < mate_value)
+		{
+			printf("info score mate %d depth %d nodes %ld time %d pv ", (mate_value - score) / 2 + 1, current_depth, nodes, get_time_ms() - starttime);
+		}
+		else
+		{
+			printf("info score cp %d depth %d nodes %ld time %d pv ", score, current_depth, nodes, get_time_ms() - starttime);
+		}
 		// Loop over the moves within a PV line:
 		for (int count = 0; count < pv_length[0]; count++)
 		{
@@ -3687,6 +3701,8 @@ void uci_loop()
 		{
 			// Call parse position function:
 			parse_position(input);
+			// Clear hash table:
+			clear_hash_table();
 		}
 		// Parse UCI <ucinewgame> command:
 		else if (strncmp(input, "ucinewgame", 10) == 0)
@@ -3751,7 +3767,7 @@ int main()
 	// Initialize all variables:
 	init_all();
 	// Debug mode variable:
-	int debug = 1;
+	int debug = 0;
 	// If debug mode is enabled:
 	if (debug)
 	{
