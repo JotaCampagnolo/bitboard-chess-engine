@@ -2645,8 +2645,11 @@ U64 rank_masks[64];
 // Isolated pawn masks [square]:
 U64 isolated_masks[64];
 
-// Passed pawn masks [square]:
-U64 passed_masks[64];
+// White passed pawn masks [square]:
+U64 white_passed_masks[64];
+
+// Black passed pawn masks [square]:
+U64 black_passed_masks[64];
 
 // Set file or rank mask:
 U64 set_file_rank_mask(int file_number, int rank_number)
@@ -2690,9 +2693,98 @@ U64 set_file_rank_mask(int file_number, int rank_number)
 // Init evaluation masks:
 void init_evaluation_masks()
 {
-	// Set the mask:
- 	U64 mask = set_file_rank_mask(-1, 7);
-    print_bitboard(mask);
+	/*
+		INITIALIZE FILE MASKS
+	*/
+	// Loop over ranks:
+	for (int rank = 0; rank < 8; rank++)
+	{
+		// Loop over files:
+		for (int file = 0; file < 8; file++)
+		{
+			// Initialize square:
+			int square = rank * 8 + file;
+			// Initialize file mask for a current square:
+			file_masks[square] |= set_file_rank_mask(file, -1);
+		}
+	}
+	/*
+		INITIALIZE RANK MASKS
+	*/
+	// Loop over ranks:
+	for (int rank = 0; rank < 8; rank++)
+	{
+		// Loop over files:
+		for (int file = 0; file < 8; file++)
+		{
+			// Initialize square:
+			int square = rank * 8 + file;
+			// Initialize file mask for a current square:
+			rank_masks[square] |= set_file_rank_mask(-1, rank);
+		}
+	}
+	/*
+		INITIALIZE ISOLATED MASKS
+	*/
+	// Loop over ranks:
+	for (int rank = 0; rank < 8; rank++)
+	{
+		// Loop over files:
+		for (int file = 0; file < 8; file++)
+		{
+			// Initialize square:
+			int square = rank * 8 + file;
+			// Initialize file mask for a current square:
+			isolated_masks[square] |= set_file_rank_mask(file - 1, -1);
+			isolated_masks[square] |= set_file_rank_mask(file + 1, -1);
+		}
+	}
+	/*
+		INITIALIZE WHITE PASSED MASKS
+	*/
+	// Loop over ranks:
+	for (int rank = 0; rank < 8; rank++)
+	{
+		// Loop over files:
+		for (int file = 0; file < 8; file++)
+		{
+			// Initialize square:
+			int square = rank * 8 + file;
+			// Initialize file mask for a current square:
+			white_passed_masks[square] |= set_file_rank_mask(file - 1, -1);
+			white_passed_masks[square] |= set_file_rank_mask(file, -1);
+			white_passed_masks[square] |= set_file_rank_mask(file + 1, -1);
+			// Loop over redudant ranks:
+			for (int i = 0; i < (8 - rank); i++)
+			{
+				// Reset redundant bits:
+				white_passed_masks[square] &= ~rank_masks[(7 - i) * 8 + file];
+			}
+		}
+	}
+	/*
+		INITIALIZE BLACK PASSED MASKS
+	*/
+	// Loop over ranks:
+	for (int rank = 0; rank < 8; rank++)
+	{
+		// Loop over files:
+		for (int file = 0; file < 8; file++)
+		{
+			// Initialize square:
+			int square = rank * 8 + file;
+			// Initialize file mask for a current square:
+			black_passed_masks[square] |= set_file_rank_mask(file - 1, -1);
+			black_passed_masks[square] |= set_file_rank_mask(file, -1);
+			black_passed_masks[square] |= set_file_rank_mask(file + 1, -1);
+			// Loop over redudant ranks:
+			for (int i = 0; i < rank + 1; i++)
+			{
+				// Reset redundant bits:
+				black_passed_masks[square] &= ~rank_masks[i * 8 + file];
+			}
+		}
+	}
 }
 
 // Position evaluation:
