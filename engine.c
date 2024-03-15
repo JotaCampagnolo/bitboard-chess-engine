@@ -27,6 +27,7 @@
 #define tricky_position "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 "
 #define killer_position "rnbqkb1r/pp1p1pPp/8/2p1pP2/1P1P4/3P3P/P1P1P3/RNBQKBNR w KQkq e6 0 1"
 #define cmk_position "r2q1rk1/ppp2ppp/2n1bn2/2b1p3/3pP3/3P1NPP/PPP1NPB1/R1BQ1RK1 b - - 0 9 "
+#define repetitions "2r3k1/R7/8/1R6/8/8/P4KPP/8 w - - 0 40 "
 
 // Enumerate board squares:
 enum
@@ -268,6 +269,12 @@ int castle;
 
 // "Almost" unique position identifier (aka hash key or position key):
 U64 hash_key;
+
+// Positions repetition table:
+U64 repetition_table[150];
+
+// Repetition index:
+int repetition_index;
 
 /******************************************************************************\
 =========================== TIME CONTROL VARIABLES =============================
@@ -3057,6 +3064,23 @@ static inline int sort_moves(moves *move_list)
 	}
 }
 
+// Position repetition detection:
+static inline int is_repetition()
+{
+	// Loop over repetition indices range:
+	for (int index = 0; index < repetition_index; index++)
+	{
+		// If found the hash key equals the current:
+		if (repetition_table[index] == hash_key)
+		{
+			// Return that a repetition was found:
+			return 1;
+		}
+	}
+	// If no repetition found:
+	return 0;
+}
+
 // Quiescence serach:
 static inline int quiescence(int alpha, int beta)
 {
@@ -3068,7 +3092,6 @@ static inline int quiescence(int alpha, int beta)
 	}
 	// Increment nodes count:
 	nodes++;
-	//
 	// Evaluate position:
 	int evaluation = evaluate();
 	// Fail-hard beta cutoff:
@@ -3096,11 +3119,16 @@ static inline int quiescence(int alpha, int beta)
 		copy_board();
 		// Increment the ply:
 		ply++;
+		// Increment repetition index and store hash key:
+		repetition_index++;
+		repetition_table[repetition_index] = hash_key;
 		// Make sure to make only legal moves:
 		if (make_move(move_list->moves[count], only_captures) == 0)
 		{
 			// Decrement ply:
 			ply--;
+			// Decrement repetition index:
+			repetition_index--;
 			// Skip to the next move:
 			continue;
 		}
@@ -3108,6 +3136,8 @@ static inline int quiescence(int alpha, int beta)
 		int score = -quiescence(-beta, -alpha);
 		// Decrement ply:
 		ply--;
+		// Decrement repetition index:
+		repetition_index--;
 		// Take move back:
 		restore_board();
 		// If time is up:
@@ -3143,6 +3173,12 @@ static inline int negamax(int alpha, int beta, int depth)
 	int score;
 	// Define the hash flag:
 	int hash_flag = hash_flag_alpha;
+	// Position repetition occurs:
+	if (ply && is_repetition())
+	{
+		// Return draw score:
+		return 0;
+	}
 	// A hack from Pedro Catro to figure out if the current node is a PV node or not:
 	int pv_node = beta - alpha > 1;
 	// Reading the hash entry when not a root ply and not a PV node:
@@ -3193,6 +3229,9 @@ static inline int negamax(int alpha, int beta, int depth)
 		copy_board();
 		// Increment ply:
 		ply++;
+		// Increment repetition index and store hash key:
+		repetition_index++;
+		repetition_table[repetition_index] = hash_key;
 		// Hash enpassant if available:
 		if (enpassant != no_sq)
 		{
@@ -3208,6 +3247,8 @@ static inline int negamax(int alpha, int beta, int depth)
 		score = -negamax(-beta, -beta + 1, depth - 1 - 2);
 		// Decrement ply:
 		ply--;
+		// Decrement repetition index:
+		repetition_index--;
 		// Restore the board state:
 		restore_board();
 		// If time is up:
@@ -3244,11 +3285,16 @@ static inline int negamax(int alpha, int beta, int depth)
 		copy_board();
 		// Increment the ply:
 		ply++;
+		// Increment repetition index and store hash key:
+		repetition_index++;
+		repetition_table[repetition_index] = hash_key;
 		// Make sure to make only legal moves:
 		if (make_move(move_list->moves[count], all_moves) == 0)
 		{
 			// Decrement ply:
 			ply--;
+			// Decrement repetition index:
+			repetition_index--;
 			// Skip to the next move:
 			continue;
 		}
@@ -3296,6 +3342,8 @@ static inline int negamax(int alpha, int beta, int depth)
 		}
 		// Decrement ply:
 		ply--;
+		// Decrement repetition index:
+		repetition_index--;
 		// Take move back:
 		restore_board();
 		// If time is up:
@@ -3767,12 +3815,12 @@ int main()
 	// Initialize all variables:
 	init_all();
 	// Debug mode variable:
-	int debug = 0;
+	int debug = 1;
 	// If debug mode is enabled:
 	if (debug)
 	{
 		// Parse FEN:
-		parse_fen(start_position);
+		parse_fen(repetitions);
 		// Print the board:
 		print_board();
 		// Search position:
