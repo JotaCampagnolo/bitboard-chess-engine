@@ -2671,7 +2671,13 @@ const int double_pawn_penalty = -10;
 const int isolated_pawn_penalty = -10;
 
 // Passed pawns bonus:
-const int passed_pawn_bonus[8] = { 0, 10, 30, 50, 75, 100, 150, 200 }; 
+const int passed_pawn_bonus[8] = { 0, 10, 30, 50, 75, 100, 150, 200 };
+
+// Semi open file score:
+const int semi_open_file_scores = 10;
+
+// Open file score:
+const int open_file_score = 15;
 
 // Set file or rank mask:
 U64 set_file_rank_mask(int file_number, int rank_number)
@@ -2869,10 +2875,36 @@ static inline int evaluate()
 				score += bishop_scores[square];
 				break;
 			case R:
+				// Positional score:
 				score += rook_scores[square];
+				// Semi open file bonus:
+				if ((bitboards[P] & file_masks[square]) == 0)
+				{
+					// Give the semi open file bonus:
+					score += semi_open_file_scores;
+				}
+				// Open file bonus:
+				if (((bitboards[P] | bitboards[p]) & file_masks[square]) == 0)
+				{
+					// Give the semi open file bonus:
+					score += open_file_score;
+				}
 				break;
 			case K:
+				// Positional score:
 				score += king_scores[square];
+				// Semi open file penalty:
+				if ((bitboards[P] & file_masks[square]) == 0)
+				{
+					// Give the semi open file penalty:
+					score -= semi_open_file_scores;
+				}
+				// Open file penalty:
+				if (((bitboards[P] | bitboards[p]) & file_masks[square]) == 0)
+				{
+					// Give the semi open file penalty:
+					score -= open_file_score;
+				}
 				break;
 			// Evaluate black pieces:
 			case p:
@@ -2906,10 +2938,36 @@ static inline int evaluate()
 				score -= bishop_scores[mirror_scores[square]];
 				break;
 			case r:
+				// Positional score:
 				score -= rook_scores[mirror_scores[square]];
+				// Semi open file bonus:
+				if ((bitboards[p] & file_masks[square]) == 0)
+				{
+					// Give the semi open file bonus:
+					score -= semi_open_file_scores;
+				}
+				// Open file bonus:
+				if (((bitboards[p] | bitboards[P]) & file_masks[square]) == 0)
+				{
+					// Give the semi open file bonus:
+					score -= open_file_score;
+				}
 				break;
 			case k:
+				// Positional score:
 				score -= king_scores[mirror_scores[square]];
+				// Semi open file penalty:
+				if ((bitboards[p] & file_masks[square]) == 0)
+				{
+					// Give the semi open file penalty:
+					score += semi_open_file_scores;
+				}
+				// Open file penalty:
+				if (((bitboards[p] | bitboards[P]) & file_masks[square]) == 0)
+				{
+					// Give the semi open file penalty:
+					score += open_file_score;
+				}
 				break;
 			}
 			// Pop LS1B:
@@ -4062,7 +4120,7 @@ int main()
 	if (debug)
 	{
 		// Parse FEN:
-		parse_fen("8/8/3P4/8/8/5p2/8/8 w - - ");
+		parse_fen("6r1/p1p2p1p/8/8/8/8/P1P2P1P/1R6 w - - ");
 		// Print the board:
 		print_board();
 		// Print the score of current position:
