@@ -271,10 +271,13 @@ int castle;
 U64 hash_key;
 
 // Positions repetition table:
-U64 repetition_table[150];
+U64 repetition_table[1000];
 
 // Repetition index:
 int repetition_index;
+
+// Half move counter:
+int ply;
 
 /******************************************************************************\
 =========================== TIME CONTROL VARIABLES =============================
@@ -790,6 +793,10 @@ void parse_fen(char *fen)
 	side = 0;
 	enpassant = no_sq;
 	castle = 0;
+	// Reset repetition index:
+	repetition_index = 0;
+	// Reset the repetition table:
+	memset(repetition_table, 0ULL, sizeof(repetition_table));
 	// Loop over board ranks:
 	for (int rank = 0; rank < 8; rank++)
 	{
@@ -2769,9 +2776,6 @@ int pv_table[max_ply][max_ply];
 // Follow PV and score PV move:
 int follow_pv, score_pv;
 
-// Half move counter:
-int ply;
-
 /******************************************************************************\
 ============================ TRANSPOSITION TABLE ===============================
 \******************************************************************************/
@@ -3603,6 +3607,9 @@ void parse_position(char *command)
 				// Break out of the loop:
 				break;
 			}
+			// Increment repetition index and store the hash key:
+			repetition_index++;
+			repetition_table[repetition_index] = hash_key;
 			// Make move on the chess board:
 			make_move(move, all_moves);
 			// Move current char pointer to the end of current move:
