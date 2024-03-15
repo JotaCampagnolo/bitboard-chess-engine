@@ -22,7 +22,7 @@
 #define U64 unsigned long long
 
 // Defining FEN debug positions:
-#define empty_board "8/8/8/8/8/8/8/8 b - - "
+#define empty_board "8/8/8/8/8/8/8/8 w - - "
 #define start_position "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 "
 #define tricky_position "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 "
 #define killer_position "rnbqkb1r/pp1p1pPp/8/2p1pP2/1P1P4/3P3P/P1P1P3/RNBQKBNR w KQkq e6 0 1"
@@ -2580,7 +2580,7 @@ const int knight_scores[64] = {
 const int bishop_scores[64] = {
 		0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 10, 10, 0, 0, 0,
+		0, 20, 0, 10, 10, 0, 20, 0,
 		0, 0, 10, 20, 20, 10, 0, 0,
 		0, 0, 10, 20, 20, 10, 0, 0,
 		0, 10, 0, 0, 0, 0, 10, 0,
@@ -2650,6 +2650,28 @@ U64 white_passed_masks[64];
 
 // Black passed pawn masks [square]:
 U64 black_passed_masks[64];
+
+// Extract rank from a given square [square]:
+const int get_rank[64] =
+{
+    7, 7, 7, 7, 7, 7, 7, 7,
+    6, 6, 6, 6, 6, 6, 6, 6,
+    5, 5, 5, 5, 5, 5, 5, 5,
+    4, 4, 4, 4, 4, 4, 4, 4,
+    3, 3, 3, 3, 3, 3, 3, 3,
+    2, 2, 2, 2, 2, 2, 2, 2,
+    1, 1, 1, 1, 1, 1, 1, 1,
+	0, 0, 0, 0, 0, 0, 0, 0
+};
+
+// Double pawns penalty:
+const int double_pawn_penalty = -10;
+
+// Isolated pawns penalty:
+const int isolated_pawn_penalty = -10;
+
+// Passed pawns bonus:
+const int passed_pawn_bonus[8] = { 0, 10, 30, 50, 75, 100, 150, 200 }; 
 
 // Set file or rank mask:
 U64 set_file_rank_mask(int file_number, int rank_number)
@@ -2796,6 +2818,8 @@ static inline int evaluate()
 	U64 bitboard;
 	// Initialize piece and square:
 	int piece, square;
+	// Penalties:
+	int double_pawns = 0;
 	// Loop over the pieces bitboards:
 	for (int bb_piece = P; bb_piece <= k; bb_piece++)
 	{
@@ -2815,7 +2839,28 @@ static inline int evaluate()
 			{
 			// Evaluate white pieces:
 			case P:
+				// Positional score:
 				score += pawn_scores[square];
+				// Double pawn panalty:
+				double_pawns = count_bits(bitboards[P] & file_masks[square]);
+				// On stacked pawns:
+				if (double_pawns > 1)
+				{
+					// Applies the penalty:
+					score += double_pawns * double_pawn_penalty;
+				}
+				// On isolated pawns:
+				if ((bitboards[P] & isolated_masks[square]) == 0)
+				{
+					// Give an isolated pawn penalty:
+					score += isolated_pawn_penalty;
+				}
+				// On passed pawns:
+				if ((white_passed_masks[square] & bitboards[p]) == 0)
+				{
+					// Give an passed pawn bonus:
+					score += passed_pawn_bonus[get_rank[square]];
+				}
 				break;
 			case N:
 				score += knight_scores[square];
@@ -2831,7 +2876,28 @@ static inline int evaluate()
 				break;
 			// Evaluate black pieces:
 			case p:
+				// Positional score:
 				score -= pawn_scores[mirror_scores[square]];
+				// Double pawn panalty:
+				double_pawns = count_bits(bitboards[p] & file_masks[square]);
+				// On stacked pawns:
+				if (double_pawns > 1)
+				{
+					// Applies the penalty:
+					score -= double_pawns * double_pawn_penalty;
+				}
+				// On isolated pawns:
+				if ((bitboards[p] & isolated_masks[square]) == 0)
+				{
+					// Give an isolated pawn penalty:
+					score -= isolated_pawn_penalty;
+				}
+				// On passed pawns:
+				if ((black_passed_masks[square] & bitboards[P]) == 0)
+				{
+					// Give an passed pawn bonus:
+					score -= passed_pawn_bonus[get_rank[mirror_scores[square]]];
+				}
 				break;
 			case n:
 				score -= knight_scores[mirror_scores[square]];
@@ -3996,11 +4062,13 @@ int main()
 	if (debug)
 	{
 		// Parse FEN:
-		parse_fen(repetitions);
+		parse_fen("8/8/3P4/8/8/5p2/8/8 w - - ");
 		// Print the board:
 		print_board();
+		// Print the score of current position:
+		printf("Score: %d\n", evaluate());
 		// Search position:
-		search_position(10);
+		//search_position(10);
 	}
 	// If debug mode is disabled:
 	else
