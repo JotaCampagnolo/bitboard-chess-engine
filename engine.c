@@ -2620,6 +2620,81 @@ const int mirror_scores[128] = {
 		a7, b7, c7, d7, e7, f7, g7, h7,
 		a8, b8, c8, d8, e8, f8, g8, h8};
 
+/*
+          Rank mask            File mask           Isolated mask        Passed pawn mask
+        for square a6        for square f2         for square g2          for square c4
+
+    8  0 0 0 0 0 0 0 0    8  0 0 0 0 0 1 0 0    8  0 0 0 0 0 1 0 1     8  0 1 1 1 0 0 0 0
+    7  0 0 0 0 0 0 0 0    7  0 0 0 0 0 1 0 0    7  0 0 0 0 0 1 0 1     7  0 1 1 1 0 0 0 0
+    6  1 1 1 1 1 1 1 1    6  0 0 0 0 0 1 0 0    6  0 0 0 0 0 1 0 1     6  0 1 1 1 0 0 0 0
+    5  0 0 0 0 0 0 0 0    5  0 0 0 0 0 1 0 0    5  0 0 0 0 0 1 0 1     5  0 1 1 1 0 0 0 0
+    4  0 0 0 0 0 0 0 0    4  0 0 0 0 0 1 0 0    4  0 0 0 0 0 1 0 1     4  0 0 0 0 0 0 0 0
+    3  0 0 0 0 0 0 0 0    3  0 0 0 0 0 1 0 0    3  0 0 0 0 0 1 0 1     3  0 0 0 0 0 0 0 0
+    2  0 0 0 0 0 0 0 0    2  0 0 0 0 0 1 0 0    2  0 0 0 0 0 1 0 1     2  0 0 0 0 0 0 0 0
+    1  0 0 0 0 0 0 0 0    1  0 0 0 0 0 1 0 0    1  0 0 0 0 0 1 0 1     1  0 0 0 0 0 0 0 0
+
+       a b c d e f g h       a b c d e f g h       a b c d e f g h        a b c d e f g h 
+*/
+
+// File masks [square]:
+U64 file_masks[64];
+
+// Rank masks [square]:
+U64 rank_masks[64];
+
+// Isolated pawn masks [square]:
+U64 isolated_masks[64];
+
+// Passed pawn masks [square]:
+U64 passed_masks[64];
+
+// Set file or rank mask:
+U64 set_file_rank_mask(int file_number, int rank_number)
+{
+	// Initialize file or rank mask:
+    U64 mask = 0ULL;    
+    // Loop over the ranks:
+    for (int rank = 0; rank < 8; rank++)
+    {
+        // Loop over the files:
+        for (int file = 0; file < 8; file++)
+        {
+            // Initialize the square:
+            int square = rank * 8 + file;
+            // If there is a given file:
+            if (file_number != -1)
+            {
+                // On file match:
+                if (file == file_number)
+				{
+                    // Set bit on the mask:
+                    mask |= set_bit(mask, square);
+				}
+            }
+            // If there is a given rank:
+            else if (rank_number != -1)
+            {
+                // On rank match:
+                if (rank == rank_number)
+				{
+                    // Set bit on the mask:
+                    mask |= set_bit(mask, square);
+				}
+            }
+        }
+    }
+    // Return the mask:
+    return mask;
+}
+
+// Init evaluation masks:
+void init_evaluation_masks()
+{
+	// Set the mask:
+ 	U64 mask = set_file_rank_mask(-1, 7);
+    print_bitboard(mask);
+}
+
 // Position evaluation:
 static inline int evaluate()
 {
@@ -3811,6 +3886,8 @@ void init_all()
 	init_random_keys();
 	// Clear hash table:
 	clear_hash_table();
+	// Initalize evaluation masks:
+	init_evaluation_masks();
 }
 
 /******************************************************************************\
