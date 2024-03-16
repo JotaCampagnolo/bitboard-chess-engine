@@ -2426,7 +2426,7 @@ static inline void generate_moves(moves *move_list)
 \******************************************************************************/
 
 // Leaf nodes (number of positions reached during the test of the moves generator at a given depth):
-long nodes;
+U64 nodes;
 
 // PERFT driver:
 static inline void perft_driver(int depth)
@@ -2519,7 +2519,7 @@ void perft_test(int depth)
 	}
 	// Print results:
 	printf("\nDepth: %d\n", depth);
-	printf("Nodes: %ld\n", nodes);
+	printf("Nodes: %lld\n", nodes);
 	printf("Time: %ldms\n\n", get_time_ms() - start);
 }
 
@@ -2621,19 +2621,19 @@ const int mirror_scores[128] = {
 		a8, b8, c8, d8, e8, f8, g8, h8};
 
 /*
-          Rank mask            File mask           Isolated mask        Passed pawn mask
-        for square a6        for square f2         for square g2          for square c4
+					Rank mask            File mask           Isolated mask        Passed pawn mask
+				for square a6        for square f2         for square g2          for square c4
 
-    8  0 0 0 0 0 0 0 0    8  0 0 0 0 0 1 0 0    8  0 0 0 0 0 1 0 1     8  0 1 1 1 0 0 0 0
-    7  0 0 0 0 0 0 0 0    7  0 0 0 0 0 1 0 0    7  0 0 0 0 0 1 0 1     7  0 1 1 1 0 0 0 0
-    6  1 1 1 1 1 1 1 1    6  0 0 0 0 0 1 0 0    6  0 0 0 0 0 1 0 1     6  0 1 1 1 0 0 0 0
-    5  0 0 0 0 0 0 0 0    5  0 0 0 0 0 1 0 0    5  0 0 0 0 0 1 0 1     5  0 1 1 1 0 0 0 0
-    4  0 0 0 0 0 0 0 0    4  0 0 0 0 0 1 0 0    4  0 0 0 0 0 1 0 1     4  0 0 0 0 0 0 0 0
-    3  0 0 0 0 0 0 0 0    3  0 0 0 0 0 1 0 0    3  0 0 0 0 0 1 0 1     3  0 0 0 0 0 0 0 0
-    2  0 0 0 0 0 0 0 0    2  0 0 0 0 0 1 0 0    2  0 0 0 0 0 1 0 1     2  0 0 0 0 0 0 0 0
-    1  0 0 0 0 0 0 0 0    1  0 0 0 0 0 1 0 0    1  0 0 0 0 0 1 0 1     1  0 0 0 0 0 0 0 0
+		8  0 0 0 0 0 0 0 0    8  0 0 0 0 0 1 0 0    8  0 0 0 0 0 1 0 1     8  0 1 1 1 0 0 0 0
+		7  0 0 0 0 0 0 0 0    7  0 0 0 0 0 1 0 0    7  0 0 0 0 0 1 0 1     7  0 1 1 1 0 0 0 0
+		6  1 1 1 1 1 1 1 1    6  0 0 0 0 0 1 0 0    6  0 0 0 0 0 1 0 1     6  0 1 1 1 0 0 0 0
+		5  0 0 0 0 0 0 0 0    5  0 0 0 0 0 1 0 0    5  0 0 0 0 0 1 0 1     5  0 1 1 1 0 0 0 0
+		4  0 0 0 0 0 0 0 0    4  0 0 0 0 0 1 0 0    4  0 0 0 0 0 1 0 1     4  0 0 0 0 0 0 0 0
+		3  0 0 0 0 0 0 0 0    3  0 0 0 0 0 1 0 0    3  0 0 0 0 0 1 0 1     3  0 0 0 0 0 0 0 0
+		2  0 0 0 0 0 0 0 0    2  0 0 0 0 0 1 0 0    2  0 0 0 0 0 1 0 1     2  0 0 0 0 0 0 0 0
+		1  0 0 0 0 0 0 0 0    1  0 0 0 0 0 1 0 0    1  0 0 0 0 0 1 0 1     1  0 0 0 0 0 0 0 0
 
-       a b c d e f g h       a b c d e f g h       a b c d e f g h        a b c d e f g h 
+			 a b c d e f g h       a b c d e f g h       a b c d e f g h        a b c d e f g h
 */
 
 // File masks [square]:
@@ -2653,16 +2653,15 @@ U64 black_passed_masks[64];
 
 // Extract rank from a given square [square]:
 const int get_rank[64] =
-{
-    7, 7, 7, 7, 7, 7, 7, 7,
-    6, 6, 6, 6, 6, 6, 6, 6,
-    5, 5, 5, 5, 5, 5, 5, 5,
-    4, 4, 4, 4, 4, 4, 4, 4,
-    3, 3, 3, 3, 3, 3, 3, 3,
-    2, 2, 2, 2, 2, 2, 2, 2,
-    1, 1, 1, 1, 1, 1, 1, 1,
-	0, 0, 0, 0, 0, 0, 0, 0
-};
+		{
+				7, 7, 7, 7, 7, 7, 7, 7,
+				6, 6, 6, 6, 6, 6, 6, 6,
+				5, 5, 5, 5, 5, 5, 5, 5,
+				4, 4, 4, 4, 4, 4, 4, 4,
+				3, 3, 3, 3, 3, 3, 3, 3,
+				2, 2, 2, 2, 2, 2, 2, 2,
+				1, 1, 1, 1, 1, 1, 1, 1,
+				0, 0, 0, 0, 0, 0, 0, 0};
 
 // Double pawns penalty:
 const int double_pawn_penalty = -10;
@@ -2671,7 +2670,7 @@ const int double_pawn_penalty = -10;
 const int isolated_pawn_penalty = -10;
 
 // Passed pawns bonus:
-const int passed_pawn_bonus[8] = { 0, 10, 30, 50, 75, 100, 150, 200 };
+const int passed_pawn_bonus[8] = {0, 10, 30, 50, 75, 100, 150, 200};
 
 // Semi open file score:
 const int semi_open_file_scores = 10;
@@ -2679,43 +2678,46 @@ const int semi_open_file_scores = 10;
 // Open file score:
 const int open_file_score = 15;
 
+// Kings shield bonus:
+const int king_shield_bonus = 5;
+
 // Set file or rank mask:
 U64 set_file_rank_mask(int file_number, int rank_number)
 {
 	// Initialize file or rank mask:
-    U64 mask = 0ULL;    
-    // Loop over the ranks:
-    for (int rank = 0; rank < 8; rank++)
-    {
-        // Loop over the files:
-        for (int file = 0; file < 8; file++)
-        {
-            // Initialize the square:
-            int square = rank * 8 + file;
-            // If there is a given file:
-            if (file_number != -1)
-            {
-                // On file match:
-                if (file == file_number)
+	U64 mask = 0ULL;
+	// Loop over the ranks:
+	for (int rank = 0; rank < 8; rank++)
+	{
+		// Loop over the files:
+		for (int file = 0; file < 8; file++)
+		{
+			// Initialize the square:
+			int square = rank * 8 + file;
+			// If there is a given file:
+			if (file_number != -1)
+			{
+				// On file match:
+				if (file == file_number)
 				{
-                    // Set bit on the mask:
-                    mask |= set_bit(mask, square);
+					// Set bit on the mask:
+					mask |= set_bit(mask, square);
 				}
-            }
-            // If there is a given rank:
-            else if (rank_number != -1)
-            {
-                // On rank match:
-                if (rank == rank_number)
+			}
+			// If there is a given rank:
+			else if (rank_number != -1)
+			{
+				// On rank match:
+				if (rank == rank_number)
 				{
-                    // Set bit on the mask:
-                    mask |= set_bit(mask, square);
+					// Set bit on the mask:
+					mask |= set_bit(mask, square);
 				}
-            }
-        }
-    }
-    // Return the mask:
-    return mask;
+			}
+		}
+	}
+	// Return the mask:
+	return mask;
 }
 
 // Init evaluation masks:
@@ -2872,7 +2874,10 @@ static inline int evaluate()
 				score += knight_scores[square];
 				break;
 			case B:
+				// Positional score:
 				score += bishop_scores[square];
+				// Mobility:
+				score += count_bits(get_bishop_attacks(square, occupancies[both]));
 				break;
 			case R:
 				// Positional score:
@@ -2890,6 +2895,10 @@ static inline int evaluate()
 					score += open_file_score;
 				}
 				break;
+			case Q:
+				// Mobility:
+				score += count_bits(get_queen_attacks(square, occupancies[both]));
+				break;
 			case K:
 				// Positional score:
 				score += king_scores[square];
@@ -2905,6 +2914,8 @@ static inline int evaluate()
 					// Give the semi open file penalty:
 					score -= open_file_score;
 				}
+				// King safety bonus:
+				score += count_bits(king_attacks[square] & occupancies[white]) * king_shield_bonus;
 				break;
 			// Evaluate black pieces:
 			case p:
@@ -2935,7 +2946,10 @@ static inline int evaluate()
 				score -= knight_scores[mirror_scores[square]];
 				break;
 			case b:
+				// Positional score:
 				score -= bishop_scores[mirror_scores[square]];
+				// Mobility:
+				score -= count_bits(get_bishop_attacks(square, occupancies[both]));
 				break;
 			case r:
 				// Positional score:
@@ -2953,6 +2967,10 @@ static inline int evaluate()
 					score -= open_file_score;
 				}
 				break;
+			case q:
+				// Mobility:
+				score -= count_bits(get_queen_attacks(square, occupancies[both]));
+				break;
 			case k:
 				// Positional score:
 				score -= king_scores[mirror_scores[square]];
@@ -2968,6 +2986,8 @@ static inline int evaluate()
 					// Give the semi open file penalty:
 					score += open_file_score;
 				}
+				// King safety bonus:
+				score -= count_bits(king_attacks[square] & occupancies[black]) * king_shield_bonus;
 				break;
 			}
 			// Pop LS1B:
@@ -3759,15 +3779,15 @@ void search_position(int depth)
 		// Send the score to GUI through UCI command:
 		if (score > -mate_value && score < -mate_score)
 		{
-			printf("info score mate %d depth %d nodes %ld time %d pv ", -(score + mate_value) / 2 - 1, current_depth, nodes, get_time_ms() - starttime);
+			printf("info score mate %d depth %d nodes %lld time %d pv ", -(score + mate_value) / 2 - 1, current_depth, nodes, get_time_ms() - starttime);
 		}
 		else if (score > mate_score && score < mate_value)
 		{
-			printf("info score mate %d depth %d nodes %ld time %d pv ", (mate_value - score) / 2 + 1, current_depth, nodes, get_time_ms() - starttime);
+			printf("info score mate %d depth %d nodes %lld time %d pv ", (mate_value - score) / 2 + 1, current_depth, nodes, get_time_ms() - starttime);
 		}
 		else
 		{
-			printf("info score cp %d depth %d nodes %ld time %d pv ", score, current_depth, nodes, get_time_ms() - starttime);
+			printf("info score cp %d depth %d nodes %lld time %d pv ", score, current_depth, nodes, get_time_ms() - starttime);
 		}
 		// Loop over the moves within a PV line:
 		for (int count = 0; count < pv_length[0]; count++)
@@ -4120,13 +4140,13 @@ int main()
 	if (debug)
 	{
 		// Parse FEN:
-		parse_fen("6r1/p1p2p1p/8/8/8/8/P1P2P1P/1R6 w - - ");
+		parse_fen("6k1/ppppprbp/8/8/8/8/PPPPPRBP/6K1 w - - ");
 		// Print the board:
 		print_board();
 		// Print the score of current position:
 		printf("Score: %d\n", evaluate());
 		// Search position:
-		//search_position(10);
+		// search_position(10);
 	}
 	// If debug mode is disabled:
 	else
