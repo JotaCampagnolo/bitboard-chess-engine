@@ -3092,7 +3092,7 @@ int follow_pv, score_pv;
 \******************************************************************************/
 
 // Hash table size:
-#define hash_size 0x400000
+#define hash_size 800000
 
 // No hash entry found constant:
 #define no_hash_entry 100000
@@ -4008,7 +4008,12 @@ void parse_go(char *command)
 		timeset = 1;
 		// Set up timing:
 		time /= movestogo;
-		time -= 50;
+		// "Illegal" (empty) move bug fix:
+		if (time > 1500)
+		{
+			time -= 50;
+		}
+		// Initializate stotime:
 		stoptime = starttime + time + inc;
 	}
 	// If depth is not available:
