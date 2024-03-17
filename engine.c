@@ -2928,6 +2928,21 @@ static inline int evaluate()
 {
 	// Get the game phase score:
 	int game_phase_score = get_game_phase_score();
+	// Initialize the game phase variable:
+	int game_phase = -1;
+	// Define the game phase based on game phase score:
+	if (game_phase_score > opening_phase_score)
+	{
+		game_phase = opening;
+	}
+	else if (game_phase_score < endgame_phase_score)
+	{
+		game_phase = endgame;
+	}
+	else
+	{
+		game_phase = middlegame;
+	}
 	// Static evaluation score:
 	int score = 0;
 	// Current pieces bitboard copy:
@@ -2948,16 +2963,49 @@ static inline int evaluate()
 			piece = bb_piece;
 			// Initialize square:
 			square = get_ls1b_index(bitboard);
-			// Score material weights:
-			score += material_score[piece];
+			// Interpolate material weights (for middlegame):
+			if (game_phase == middlegame)
+			{
+				/*
+						Now in order to calculate interpolated score
+						for a given game phase we use this formula
+						(same for material and positional scores):
+
+						(
+							score_opening * game_phase_score +
+							score_endgame * (opening_phase_score - game_phase_score)
+						) / opening_phase_score
+
+						E.g. the score for pawn on d4 at phase say 5000 would be
+						interpolated_score = (12 * 5000 + (-7) * (6192 - 5000)) / 6192 = 8,342377261
+				*/
+				score += (material_score[opening][piece] * game_phase_score +
+									material_score[endgame][piece] * (opening_phase_score - game_phase_score)) /
+								 opening_phase_score;
+			}
+			// Score material weights (for opening and engame):
+			else
+			{
+				score += material_score[game_phase][piece];
+			}
 			// Score positional weights:
 			switch (piece)
 			{
 			// Evaluate white pieces:
 			case P:
+				// Positional interpolated score:
+				if (game_phase == middlegame)
+				{
+					score += (positional_score[opening][PAWN][square] * game_phase_score +
+										positional_score[endgame][PAWN][square] * (opening_phase_score - game_phase_score)) /
+									 opening_phase_score;
+				}
 				// Positional score:
-				score += pawn_scores[square];
-				// Double pawn panalty:
+				else
+				{
+					score += positional_score[game_phase][PAWN][square];
+				}
+				/* // Double pawn panalty:
 				double_pawns = count_bits(bitboards[P] & file_masks[square]);
 				// On stacked pawns:
 				if (double_pawns > 1)
@@ -2976,21 +3024,52 @@ static inline int evaluate()
 				{
 					// Give an passed pawn bonus:
 					score += passed_pawn_bonus[get_rank[square]];
-				}
+				} */
 				break;
 			case N:
-				score += knight_scores[square];
+				// Positional interpolated score:
+				if (game_phase == middlegame)
+				{
+					score += (positional_score[opening][KNIGHT][square] * game_phase_score +
+										positional_score[endgame][KNIGHT][square] * (opening_phase_score - game_phase_score)) /
+									 opening_phase_score;
+				}
+				// Positional score:
+				else
+				{
+					score += positional_score[game_phase][KNIGHT][square];
+				}
 				break;
 			case B:
+				// Positional interpolated score:
+				if (game_phase == middlegame)
+				{
+					score += (positional_score[opening][BISHOP][square] * game_phase_score +
+										positional_score[endgame][BISHOP][square] * (opening_phase_score - game_phase_score)) /
+									 opening_phase_score;
+				}
 				// Positional score:
-				score += bishop_scores[square];
-				// Mobility:
-				score += count_bits(get_bishop_attacks(square, occupancies[both]));
+				else
+				{
+					score += positional_score[game_phase][BISHOP][square];
+				}
+				/* // Mobility:
+				score += count_bits(get_bishop_attacks(square, occupancies[both])); */
 				break;
 			case R:
+				// Positional interpolated score:
+				if (game_phase == middlegame)
+				{
+					score += (positional_score[opening][ROOK][square] * game_phase_score +
+										positional_score[endgame][ROOK][square] * (opening_phase_score - game_phase_score)) /
+									 opening_phase_score;
+				}
 				// Positional score:
-				score += rook_scores[square];
-				// Semi open file bonus:
+				else
+				{
+					score += positional_score[game_phase][ROOK][square];
+				}
+				/* // Semi open file bonus:
 				if ((bitboards[P] & file_masks[square]) == 0)
 				{
 					// Give the semi open file bonus:
@@ -3001,16 +3080,38 @@ static inline int evaluate()
 				{
 					// Give the semi open file bonus:
 					score += open_file_score;
-				}
+				} */
 				break;
 			case Q:
-				// Mobility:
-				score += count_bits(get_queen_attacks(square, occupancies[both]));
+				// Positional interpolated score:
+				if (game_phase == middlegame)
+				{
+					score += (positional_score[opening][QUEEN][square] * game_phase_score +
+										positional_score[endgame][QUEEN][square] * (opening_phase_score - game_phase_score)) /
+									 opening_phase_score;
+				}
+				// Positional score:
+				else
+				{
+					score += positional_score[game_phase][QUEEN][square];
+				}
+				/* // Mobility:
+				score += count_bits(get_queen_attacks(square, occupancies[both])); */
 				break;
 			case K:
+				// Positional interpolated score:
+				if (game_phase == middlegame)
+				{
+					score += (positional_score[opening][KING][square] * game_phase_score +
+										positional_score[endgame][KING][square] * (opening_phase_score - game_phase_score)) /
+									 opening_phase_score;
+				}
 				// Positional score:
-				score += king_scores[square];
-				// Semi open file penalty:
+				else
+				{
+					score += positional_score[game_phase][KING][square];
+				}
+				/* // Semi open file penalty:
 				if ((bitboards[P] & file_masks[square]) == 0)
 				{
 					// Give the semi open file penalty:
@@ -3023,13 +3124,23 @@ static inline int evaluate()
 					score -= open_file_score;
 				}
 				// King safety bonus:
-				score += count_bits(king_attacks[square] & occupancies[white]) * king_shield_bonus;
+				score += count_bits(king_attacks[square] & occupancies[white]) * king_shield_bonus; */
 				break;
 			// Evaluate black pieces:
 			case p:
+				// Positional interpolated score:
+				if (game_phase == middlegame)
+				{
+					score -= (positional_score[opening][PAWN][mirror_scores[square]] * game_phase_score +
+										positional_score[endgame][PAWN][mirror_scores[square]] * (opening_phase_score - game_phase_score)) /
+									 opening_phase_score;
+				}
 				// Positional score:
-				score -= pawn_scores[mirror_scores[square]];
-				// Double pawn panalty:
+				else
+				{
+					score -= positional_score[game_phase][PAWN][mirror_scores[square]];
+				}
+				/* // Double pawn panalty:
 				double_pawns = count_bits(bitboards[p] & file_masks[square]);
 				// On stacked pawns:
 				if (double_pawns > 1)
@@ -3048,21 +3159,52 @@ static inline int evaluate()
 				{
 					// Give an passed pawn bonus:
 					score -= passed_pawn_bonus[get_rank[mirror_scores[square]]];
-				}
+				} */
 				break;
 			case n:
-				score -= knight_scores[mirror_scores[square]];
+				// Positional interpolated score:
+				if (game_phase == middlegame)
+				{
+					score -= (positional_score[opening][KNIGHT][mirror_scores[square]] * game_phase_score +
+										positional_score[endgame][KNIGHT][mirror_scores[square]] * (opening_phase_score - game_phase_score)) /
+									 opening_phase_score;
+				}
+				// Positional score:
+				else
+				{
+					score -= positional_score[game_phase][KNIGHT][mirror_scores[square]];
+				}
 				break;
 			case b:
+				// Positional interpolated score:
+				if (game_phase == middlegame)
+				{
+					score -= (positional_score[opening][BISHOP][mirror_scores[square]] * game_phase_score +
+										positional_score[endgame][BISHOP][mirror_scores[square]] * (opening_phase_score - game_phase_score)) /
+									 opening_phase_score;
+				}
 				// Positional score:
-				score -= bishop_scores[mirror_scores[square]];
-				// Mobility:
-				score -= count_bits(get_bishop_attacks(square, occupancies[both]));
+				else
+				{
+					score -= positional_score[game_phase][BISHOP][mirror_scores[square]];
+				}
+				/* // Mobility:
+				score -= count_bits(get_bishop_attacks(square, occupancies[both])); */
 				break;
 			case r:
+				// Positional interpolated score:
+				if (game_phase == middlegame)
+				{
+					score -= (positional_score[opening][ROOK][mirror_scores[square]] * game_phase_score +
+										positional_score[endgame][ROOK][mirror_scores[square]] * (opening_phase_score - game_phase_score)) /
+									 opening_phase_score;
+				}
 				// Positional score:
-				score -= rook_scores[mirror_scores[square]];
-				// Semi open file bonus:
+				else
+				{
+					score -= positional_score[game_phase][ROOK][mirror_scores[square]];
+				}
+				/* // Semi open file bonus:
 				if ((bitboards[p] & file_masks[square]) == 0)
 				{
 					// Give the semi open file bonus:
@@ -3073,16 +3215,38 @@ static inline int evaluate()
 				{
 					// Give the semi open file bonus:
 					score -= open_file_score;
-				}
+				} */
 				break;
 			case q:
-				// Mobility:
-				score -= count_bits(get_queen_attacks(square, occupancies[both]));
+				// Positional interpolated score:
+				if (game_phase == middlegame)
+				{
+					score -= (positional_score[opening][QUEEN][mirror_scores[square]] * game_phase_score +
+										positional_score[endgame][QUEEN][mirror_scores[square]] * (opening_phase_score - game_phase_score)) /
+									 opening_phase_score;
+				}
+				// Positional score:
+				else
+				{
+					score -= positional_score[game_phase][QUEEN][mirror_scores[square]];
+				}
+				/* // Mobility:
+				score -= count_bits(get_queen_attacks(square, occupancies[both])); */
 				break;
 			case k:
+				// Positional interpolated score:
+				if (game_phase == middlegame)
+				{
+					score -= (positional_score[opening][KING][mirror_scores[square]] * game_phase_score +
+										positional_score[endgame][KING][mirror_scores[square]] * (opening_phase_score - game_phase_score)) /
+									 opening_phase_score;
+				}
 				// Positional score:
-				score -= king_scores[mirror_scores[square]];
-				// Semi open file penalty:
+				else
+				{
+					score -= positional_score[game_phase][KING][mirror_scores[square]];
+				}
+				/* // Semi open file penalty:
 				if ((bitboards[p] & file_masks[square]) == 0)
 				{
 					// Give the semi open file penalty:
@@ -3095,7 +3259,7 @@ static inline int evaluate()
 					score += open_file_score;
 				}
 				// King safety bonus:
-				score -= count_bits(king_attacks[square] & occupancies[black]) * king_shield_bonus;
+				score -= count_bits(king_attacks[square] & occupancies[black]) * king_shield_bonus; */
 				break;
 			}
 			// Pop LS1B:
@@ -4253,7 +4417,7 @@ int main()
 	if (debug)
 	{
 		// Parse FEN:
-		parse_fen("6k1/ppppprbp/8/8/8/8/PPPPPRBP/6K1 w - - ");
+		parse_fen(start_position);
 		// Print the board:
 		print_board();
 		// Print the score of current position:
