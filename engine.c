@@ -2743,19 +2743,31 @@ const int get_rank[64] =
 				0, 0, 0, 0, 0, 0, 0, 0};
 
 // Double pawns penalty:
-const int double_pawn_penalty = -10;
+const int double_pawn_penalty_opening = -5;
+const int double_pawn_penalty_endgame = -10;
 
 // Isolated pawns penalty:
-const int isolated_pawn_penalty = -10;
+const int isolated_pawn_penalty_opening = -5;
+const int isolated_pawn_penalty_endgame = -10;
 
 // Passed pawns bonus:
 const int passed_pawn_bonus[8] = {0, 10, 30, 50, 75, 100, 150, 200};
 
 // Semi open file score:
-const int semi_open_file_scores = 10;
+const int semi_open_file_score = 10;
 
 // Open file score:
 const int open_file_score = 15;
+
+// Mobility units (values from engine Fruit reloaded):
+static const int bishop_unit = 4;
+static const int queen_unit = 9;
+
+// Mobility bonuses (values from engine Fruit reloaded):
+static const int bishop_mobility_opening = 5;
+static const int bishop_mobility_endgame = 5;
+static const int queen_mobility_opening = 1;
+static const int queen_mobility_endgame = 2;
 
 // Kings shield bonus:
 const int king_shield_bonus = 5;
@@ -2979,26 +2991,29 @@ static inline int evaluate()
 				// Calculate positional (opening and endgame) scores:
 				score_opening += positional_score[opening][PAWN][square];
 				score_endgame += positional_score[endgame][PAWN][square];
-				/* // Double pawn panalty:
+				// Double pawn penalty:
 				double_pawns = count_bits(bitboards[P] & file_masks[square]);
-				// On stacked pawns:
+				// On double pawns (tripple, etc):
 				if (double_pawns > 1)
 				{
-					// Applies the penalty:
-					score += double_pawns * double_pawn_penalty;
+					// Aply the penalty:
+					score_opening += (double_pawns - 1) * double_pawn_penalty_opening;
+					score_endgame += (double_pawns - 1) * double_pawn_penalty_endgame;
 				}
-				// On isolated pawns:
+				// On isolated pawn:
 				if ((bitboards[P] & isolated_masks[square]) == 0)
 				{
-					// Give an isolated pawn penalty:
-					score += isolated_pawn_penalty;
+					// Aply the penalty:
+					score_opening += isolated_pawn_penalty_opening;
+					score_endgame += isolated_pawn_penalty_endgame;
 				}
-				// On passed pawns:
+				// On passed pawn:
 				if ((white_passed_masks[square] & bitboards[p]) == 0)
 				{
-					// Give an passed pawn bonus:
-					score += passed_pawn_bonus[get_rank[square]];
-				} */
+					// Aply the bonus:
+					score_opening += passed_pawn_bonus[get_rank[square]];
+					score_endgame += passed_pawn_bonus[get_rank[square]];
+				}
 				break;
 			case N:
 				// Calculate positional (opening and endgame) scores:
@@ -3009,77 +3024,87 @@ static inline int evaluate()
 				// Calculate positional (opening and endgame) scores:
 				score_opening += positional_score[opening][BISHOP][square];
 				score_endgame += positional_score[endgame][BISHOP][square];
-				/* // Mobility:
-				score += count_bits(get_bishop_attacks(square, occupancies[both])); */
+				// Mobility modifiers:
+				score_opening += (count_bits(get_bishop_attacks(square, occupancies[both])) - bishop_unit) * bishop_mobility_opening;
+				score_endgame += (count_bits(get_bishop_attacks(square, occupancies[both])) - bishop_unit) * bishop_mobility_endgame; 
 				break;
 			case R:
 				// Calculate positional (opening and endgame) scores:
 				score_opening += positional_score[opening][ROOK][square];
 				score_endgame += positional_score[endgame][ROOK][square];
-				/* // Semi open file bonus:
+				// Semi open file:
 				if ((bitboards[P] & file_masks[square]) == 0)
 				{
-					// Give the semi open file bonus:
-					score += semi_open_file_scores;
+					// Aply the bonus:
+					score_opening += semi_open_file_score;
+					score_endgame += semi_open_file_score;
 				}
-				// Open file bonus:
+				// Open file:
 				if (((bitboards[P] | bitboards[p]) & file_masks[square]) == 0)
 				{
-					// Give the semi open file bonus:
-					score += open_file_score;
-				} */
+					// Aply the bonus:
+					score_opening += open_file_score;
+					score_endgame += open_file_score;
+				}
 				break;
 			case Q:
 				// Calculate positional (opening and endgame) scores:
 				score_opening += positional_score[opening][QUEEN][square];
 				score_endgame += positional_score[endgame][QUEEN][square];
-				/* // Mobility:
-				score += count_bits(get_queen_attacks(square, occupancies[both])); */
+				// Mobility modifiers:
+				score_opening += (count_bits(get_queen_attacks(square, occupancies[both])) - queen_unit) * queen_mobility_opening;
+				score_endgame += (count_bits(get_queen_attacks(square, occupancies[both])) - queen_unit) * queen_mobility_endgame; 
 				break;
 			case K:
 				// Calculate positional (opening and endgame) scores:
 				score_opening += positional_score[opening][KING][square];
 				score_endgame += positional_score[endgame][KING][square];
-				/* // Semi open file penalty:
+				// Semi open file:
 				if ((bitboards[P] & file_masks[square]) == 0)
 				{
-					// Give the semi open file penalty:
-					score -= semi_open_file_scores;
+					// Aply the penalty:
+					score_opening -= semi_open_file_score;
+					score_endgame -= semi_open_file_score;
 				}
-				// Open file penalty:
+				// Open file:
 				if (((bitboards[P] | bitboards[p]) & file_masks[square]) == 0)
 				{
-					// Give the semi open file penalty:
-					score -= open_file_score;
+					// Aply the penalty:
+					score_opening -= open_file_score;
+					score_endgame -= open_file_score;
 				}
 				// King safety bonus:
-				score += count_bits(king_attacks[square] & occupancies[white]) * king_shield_bonus; */
+				score_opening += count_bits(king_attacks[square] & occupancies[white]) * king_shield_bonus;
+				score_endgame += count_bits(king_attacks[square] & occupancies[white]) * king_shield_bonus;
 				break;
 			// Evaluate black pieces:
 			case p:
 				// Calculate positional (opening and endgame) scores:
 				score_opening -= positional_score[opening][PAWN][mirror_scores[square]];
 				score_endgame -= positional_score[endgame][PAWN][mirror_scores[square]];
-				/* // Double pawn panalty:
+				// Double pawn penalty:
 				double_pawns = count_bits(bitboards[p] & file_masks[square]);
-				// On stacked pawns:
+				// On double pawns (tripple, etc):
 				if (double_pawns > 1)
 				{
-					// Applies the penalty:
-					score -= double_pawns * double_pawn_penalty;
+					// Aply the penalty:
+					score_opening -= (double_pawns - 1) * double_pawn_penalty_opening;
+					score_endgame -= (double_pawns - 1) * double_pawn_penalty_endgame;
 				}
-				// On isolated pawns:
+				// On isolated pawn:
 				if ((bitboards[p] & isolated_masks[square]) == 0)
 				{
-					// Give an isolated pawn penalty:
-					score -= isolated_pawn_penalty;
+					// Aply the penalty
+					score_opening -= isolated_pawn_penalty_opening;
+					score_endgame -= isolated_pawn_penalty_endgame;
 				}
-				// On passed pawns:
+				// On passed pawn:
 				if ((black_passed_masks[square] & bitboards[P]) == 0)
 				{
-					// Give an passed pawn bonus:
-					score -= passed_pawn_bonus[get_rank[mirror_scores[square]]];
-				} */
+					// Aply the bonus:
+					score_opening -= passed_pawn_bonus[get_rank[square]];
+					score_endgame -= passed_pawn_bonus[get_rank[square]];
+				}
 				break;
 			case n:
 				// Calculate positional (opening and endgame) scores:
@@ -3090,51 +3115,58 @@ static inline int evaluate()
 				// Calculate positional (opening and endgame) scores:
 				score_opening -= positional_score[opening][BISHOP][mirror_scores[square]];
 				score_endgame -= positional_score[endgame][BISHOP][mirror_scores[square]];
-				/* // Mobility:
-				score -= count_bits(get_bishop_attacks(square, occupancies[both])); */
+				// Mobility modifiers:
+				score_opening -= (count_bits(get_bishop_attacks(square, occupancies[both])) - bishop_unit) * bishop_mobility_opening;
+				score_endgame -= (count_bits(get_bishop_attacks(square, occupancies[both])) - bishop_unit) * bishop_mobility_endgame;  
 				break;
 			case r:
 				// Calculate positional (opening and endgame) scores:
 				score_opening -= positional_score[opening][ROOK][mirror_scores[square]];
 				score_endgame -= positional_score[endgame][ROOK][mirror_scores[square]];
-				/* // Semi open file bonus:
+				// Semi open file:
 				if ((bitboards[p] & file_masks[square]) == 0)
 				{
-					// Give the semi open file bonus:
-					score -= semi_open_file_scores;
+					// Aply the bonus:
+					score_opening -= semi_open_file_score;
+					score_endgame -= semi_open_file_score;
 				}
-				// Open file bonus:
-				if (((bitboards[p] | bitboards[P]) & file_masks[square]) == 0)
-				{
-					// Give the semi open file bonus:
-					score -= open_file_score;
-				} */
+				// Open file:
+				if (((bitboards[P] | bitboards[p]) & file_masks[square]) == 0)
+				{    
+					// Aply the bonus:
+					score_opening -= open_file_score;
+					score_endgame -= open_file_score;
+				}
 				break;
 			case q:
 				// Calculate positional (opening and endgame) scores:
 				score_opening -= positional_score[opening][QUEEN][mirror_scores[square]];
 				score_endgame -= positional_score[endgame][QUEEN][mirror_scores[square]];
-				/* // Mobility:
-				score -= count_bits(get_queen_attacks(square, occupancies[both])); */
+				// Mobility modifier:
+				score_opening -= (count_bits(get_queen_attacks(square, occupancies[both])) - queen_unit) * queen_mobility_opening;
+				score_endgame -= (count_bits(get_queen_attacks(square, occupancies[both])) - queen_unit) * queen_mobility_endgame;
 				break;
 			case k:
 				// Calculate positional (opening and endgame) scores:
 				score_opening -= positional_score[opening][KING][mirror_scores[square]];
 				score_endgame -= positional_score[endgame][KING][mirror_scores[square]];
-				/* // Semi open file penalty:
+				// Semi open file:
 				if ((bitboards[p] & file_masks[square]) == 0)
 				{
-					// Give the semi open file penalty:
-					score += semi_open_file_scores;
+					// Aply the penalty:
+					score_opening += semi_open_file_score;
+					score_endgame += semi_open_file_score;
 				}
-				// Open file penalty:
-				if (((bitboards[p] | bitboards[P]) & file_masks[square]) == 0)
+				// Open file:
+				if (((bitboards[P] | bitboards[p]) & file_masks[square]) == 0)
 				{
-					// Give the semi open file penalty:
-					score += open_file_score;
+					// Aply the penalty:
+					score_opening += open_file_score;
+					score_endgame += open_file_score;
 				}
 				// King safety bonus:
-				score -= count_bits(king_attacks[square] & occupancies[black]) * king_shield_bonus; */
+				score_opening -= count_bits(king_attacks[square] & occupancies[black]) * king_shield_bonus;
+				score_endgame -= count_bits(king_attacks[square] & occupancies[black]) * king_shield_bonus;
 				break;
 			}
 			// Pop LS1B:
@@ -3693,6 +3725,8 @@ const int reduction_limit = 3;
 // Negamax alpha beta search:
 static inline int negamax(int alpha, int beta, int depth)
 {
+	// Initialize PV length:
+	pv_length[ply] = ply;
 	// Initialize the current move score (from the static evaluation perspective):
 	int score;
 	// Define the hash flag:
@@ -3718,8 +3752,6 @@ static inline int negamax(int alpha, int beta, int depth)
 		// "Listen" to the GUI/user input:
 		communicate();
 	}
-	// Initialize PV length:
-	pv_length[ply] = ply;
 	// Recursions escape condition:
 	if (depth == 0)
 	{
@@ -4245,6 +4277,11 @@ void parse_go(char *command)
 		}
 		// Initializate stotime:
 		stoptime = starttime + time + inc;
+		// Treat increment as seconds per move when time is almost up:
+		if (time < 1500 && inc && depth == 64)
+		{
+			stoptime = starttime + inc - 50;
+		}
 	}
 	// If depth is not available:
 	if (depth == -1)
