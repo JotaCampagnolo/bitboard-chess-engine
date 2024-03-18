@@ -3366,8 +3366,8 @@ int follow_pv, score_pv;
 ============================ TRANSPOSITION TABLE ===============================
 \******************************************************************************/
 
-// Hash table size:
-#define hash_size 800000
+// Number of hash table entries:
+int hash_entries = 0;
 
 // No hash entry found constant:
 #define no_hash_entry 100000
@@ -3387,20 +3387,51 @@ typedef struct
 } tt;
 
 // Define transposition table instance:
-tt hash_table[hash_size];
+tt *hash_table = NULL;
 
 // Clear the transposition table:
 void clear_hash_table()
 {
+	// Initialize hash table entry pointer:
+	tt *hash_entry;
 	// Loop over TT elements:
-	for (int index = 0; index < hash_size; index++)
+	for (hash_entry = hash_table; hash_entry < hash_table + hash_entries; hash_entry++)
 	{
 		// Initializate all the properties:
-		hash_table[index].hash_key = 0;
-		hash_table[index].depth = 0;
-		hash_table[index].flag = 0;
-		hash_table[index].score = 0;
+		hash_entry->hash_key = 0;
+		hash_entry->depth = 0;
+		hash_entry->flag = 0;
+		hash_entry->score = 0;
 	}
+}
+
+// Dynamically allocate memory for hash table:
+void init_hash_table(int mb)
+{
+    // Initialize hash size:
+    int hash_size = 0x100000 * mb;
+    // Initialize number of hash entries:
+    hash_entries =  hash_size / sizeof(tt);
+    // Free hash table if not empty:
+    if (hash_table != NULL)
+    {      
+        // Free hash table dynamic memory:
+        free(hash_table);
+    }
+    // Allocate memory:
+    hash_table = (tt *) malloc(hash_entries * sizeof(tt));
+    // Memory allocation has failed:
+    if (hash_table == NULL)
+    {    
+        // Try to allocate with half size:
+        init_hash_table(mb / 2);
+    }
+    // Memory allocation succeeded:
+    else
+    {
+        // Clear hash table:
+        clear_hash_table();
+    }    
 }
 
 // Write hash entry data:
@@ -3409,7 +3440,7 @@ static inline void write_hash_entry(int score, int depth, int hash_flag)
 	/* Create a TT instance pointer to the hash entry
 	responsible for storing a particular hash entry
 	scoring data for the current board position if available:	*/
-	tt *hash_entry = &hash_table[hash_key % hash_size];
+	tt *hash_entry = &hash_table[hash_key % hash_entries];
 	// Store score independent from the actual path from
 	// root node (position) to current node (position):
 	if (score < -mate_score)
@@ -3433,7 +3464,7 @@ static inline int read_hash_entry(int alpha, int beta, int depth)
 	/* Create a TT instance pointer to the hash entry
 	responsible for storing a particular hash entry
 	scoring data for the current board position if available:	*/
-	tt *hash_entry = &hash_table[hash_key % hash_size];
+	tt *hash_entry = &hash_table[hash_key % hash_entries];
 	// Make sure dealing with the exact position on the board:
 	if (hash_entry->hash_key == hash_key)
 	{
@@ -4327,6 +4358,10 @@ void parse_go(char *command)
 // Main UCI loop:
 void uci_loop()
 {
+	// Max hash MB:
+	int max_hash = 128;
+	// Default MB size:
+	int mb = 64;
 	// Reset STDIN/STDOUT buffers:
 	setbuf(stdin, NULL);
 	setbuf(stdout, NULL);
@@ -4335,6 +4370,7 @@ void uci_loop()
 	// Print engine information:
 	printf("id name BBC %s\n", version);
 	printf("id author CMK & Derlexy\n");
+	printf("option name Hash type spin default 64 min 4 max %d\n", max_hash);
 	printf("uciok\n");
 	// Main loop:
 	while (1)
@@ -4399,6 +4435,28 @@ void uci_loop()
 			printf("id author CMK & Derlexy\n");
 			printf("uciok\n");
 		}
+		// Setup the hash table MB size:
+		else if (!strncmp(input, "setoption name Hash value ", 26))
+		{
+			// Initialize MB:
+			sscanf(input, "%*s %*s %*s %*s %d", &mb);
+			// Adjust MB if going under the allowed bound:
+			if (mb < 4)
+			{
+				// Adjust MB:
+				mb = 4;
+			}
+			// Adjust MB if going over the allowed bound:
+			if (mb > max_hash)
+			{
+				// Adjust MB:
+				mb = max_hash;
+			}
+			// Set hash table size in MB:
+			printf("Set hash table size to %dMB\n", mb);
+			// Initializate the hash table:
+			init_hash_table(mb);
+		}
 	}
 }
 
@@ -4421,10 +4479,10 @@ void init_all()
 	*/
 	// Initialize random keys for hashing purposes:
 	init_random_keys();
-	// Clear hash table:
-	clear_hash_table();
 	// Initalize evaluation masks:
 	init_evaluation_masks();
+	// Initializate hash table with 64 megabytes:
+	init_hash_table(64);
 }
 
 /******************************************************************************\
