@@ -2948,6 +2948,8 @@ static inline int evaluate()
 	}
 	// Static evaluation score:
 	int score = 0;
+	int score_opening = 0;
+	int score_endgame = 0;
 	// Current pieces bitboard copy:
 	U64 bitboard;
 	// Initialize piece and square:
@@ -2966,48 +2968,17 @@ static inline int evaluate()
 			piece = bb_piece;
 			// Initialize square:
 			square = get_ls1b_index(bitboard);
-			// Interpolate material weights (for middlegame):
-			if (game_phase == middlegame)
-			{
-				/*
-						Now in order to calculate interpolated score
-						for a given game phase we use this formula
-						(same for material and positional scores):
-
-						(
-							score_opening * game_phase_score +
-							score_endgame * (opening_phase_score - game_phase_score)
-						) / opening_phase_score
-
-						E.g. the score for pawn on d4 at phase say 5000 would be
-						interpolated_score = (12 * 5000 + (-7) * (6192 - 5000)) / 6192 = 8,342377261
-				*/
-				score += (material_score[opening][piece] * game_phase_score +
-									material_score[endgame][piece] * (opening_phase_score - game_phase_score)) /
-								 opening_phase_score;
-			}
-			// Score material weights (for opening and engame):
-			else
-			{
-				score += material_score[game_phase][piece];
-			}
+			// Calculate material (opening and endgame) scores:
+			score_opening += material_score[opening][piece];
+			score_endgame += material_score[endgame][piece];
 			// Score positional weights:
 			switch (piece)
 			{
 			// Evaluate white pieces:
 			case P:
-				// Positional interpolated score:
-				if (game_phase == middlegame)
-				{
-					score += (positional_score[opening][PAWN][square] * game_phase_score +
-										positional_score[endgame][PAWN][square] * (opening_phase_score - game_phase_score)) /
-									 opening_phase_score;
-				}
-				// Positional score:
-				else
-				{
-					score += positional_score[game_phase][PAWN][square];
-				}
+				// Calculate positional (opening and endgame) scores:
+				score_opening += positional_score[opening][PAWN][square];
+				score_endgame += positional_score[endgame][PAWN][square];
 				/* // Double pawn panalty:
 				double_pawns = count_bits(bitboards[P] & file_masks[square]);
 				// On stacked pawns:
@@ -3030,48 +3001,21 @@ static inline int evaluate()
 				} */
 				break;
 			case N:
-				// Positional interpolated score:
-				if (game_phase == middlegame)
-				{
-					score += (positional_score[opening][KNIGHT][square] * game_phase_score +
-										positional_score[endgame][KNIGHT][square] * (opening_phase_score - game_phase_score)) /
-									 opening_phase_score;
-				}
-				// Positional score:
-				else
-				{
-					score += positional_score[game_phase][KNIGHT][square];
-				}
+				// Calculate positional (opening and endgame) scores:
+				score_opening += positional_score[opening][KNIGHT][square];
+				score_endgame += positional_score[endgame][KNIGHT][square];
 				break;
 			case B:
-				// Positional interpolated score:
-				if (game_phase == middlegame)
-				{
-					score += (positional_score[opening][BISHOP][square] * game_phase_score +
-										positional_score[endgame][BISHOP][square] * (opening_phase_score - game_phase_score)) /
-									 opening_phase_score;
-				}
-				// Positional score:
-				else
-				{
-					score += positional_score[game_phase][BISHOP][square];
-				}
+				// Calculate positional (opening and endgame) scores:
+				score_opening += positional_score[opening][BISHOP][square];
+				score_endgame += positional_score[endgame][BISHOP][square];
 				/* // Mobility:
 				score += count_bits(get_bishop_attacks(square, occupancies[both])); */
 				break;
 			case R:
-				// Positional interpolated score:
-				if (game_phase == middlegame)
-				{
-					score += (positional_score[opening][ROOK][square] * game_phase_score +
-										positional_score[endgame][ROOK][square] * (opening_phase_score - game_phase_score)) /
-									 opening_phase_score;
-				}
-				// Positional score:
-				else
-				{
-					score += positional_score[game_phase][ROOK][square];
-				}
+				// Calculate positional (opening and endgame) scores:
+				score_opening += positional_score[opening][ROOK][square];
+				score_endgame += positional_score[endgame][ROOK][square];
 				/* // Semi open file bonus:
 				if ((bitboards[P] & file_masks[square]) == 0)
 				{
@@ -3086,34 +3030,16 @@ static inline int evaluate()
 				} */
 				break;
 			case Q:
-				// Positional interpolated score:
-				if (game_phase == middlegame)
-				{
-					score += (positional_score[opening][QUEEN][square] * game_phase_score +
-										positional_score[endgame][QUEEN][square] * (opening_phase_score - game_phase_score)) /
-									 opening_phase_score;
-				}
-				// Positional score:
-				else
-				{
-					score += positional_score[game_phase][QUEEN][square];
-				}
+				// Calculate positional (opening and endgame) scores:
+				score_opening += positional_score[opening][QUEEN][square];
+				score_endgame += positional_score[endgame][QUEEN][square];
 				/* // Mobility:
 				score += count_bits(get_queen_attacks(square, occupancies[both])); */
 				break;
 			case K:
-				// Positional interpolated score:
-				if (game_phase == middlegame)
-				{
-					score += (positional_score[opening][KING][square] * game_phase_score +
-										positional_score[endgame][KING][square] * (opening_phase_score - game_phase_score)) /
-									 opening_phase_score;
-				}
-				// Positional score:
-				else
-				{
-					score += positional_score[game_phase][KING][square];
-				}
+				// Calculate positional (opening and endgame) scores:
+				score_opening += positional_score[opening][KING][square];
+				score_endgame += positional_score[endgame][KING][square];
 				/* // Semi open file penalty:
 				if ((bitboards[P] & file_masks[square]) == 0)
 				{
@@ -3131,18 +3057,9 @@ static inline int evaluate()
 				break;
 			// Evaluate black pieces:
 			case p:
-				// Positional interpolated score:
-				if (game_phase == middlegame)
-				{
-					score -= (positional_score[opening][PAWN][mirror_scores[square]] * game_phase_score +
-										positional_score[endgame][PAWN][mirror_scores[square]] * (opening_phase_score - game_phase_score)) /
-									 opening_phase_score;
-				}
-				// Positional score:
-				else
-				{
-					score -= positional_score[game_phase][PAWN][mirror_scores[square]];
-				}
+				// Calculate positional (opening and endgame) scores:
+				score_opening -= positional_score[opening][PAWN][mirror_scores[square]];
+				score_endgame -= positional_score[endgame][PAWN][mirror_scores[square]];
 				/* // Double pawn panalty:
 				double_pawns = count_bits(bitboards[p] & file_masks[square]);
 				// On stacked pawns:
@@ -3165,48 +3082,21 @@ static inline int evaluate()
 				} */
 				break;
 			case n:
-				// Positional interpolated score:
-				if (game_phase == middlegame)
-				{
-					score -= (positional_score[opening][KNIGHT][mirror_scores[square]] * game_phase_score +
-										positional_score[endgame][KNIGHT][mirror_scores[square]] * (opening_phase_score - game_phase_score)) /
-									 opening_phase_score;
-				}
-				// Positional score:
-				else
-				{
-					score -= positional_score[game_phase][KNIGHT][mirror_scores[square]];
-				}
+				// Calculate positional (opening and endgame) scores:
+				score_opening -= positional_score[opening][KNIGHT][mirror_scores[square]];
+				score_endgame -= positional_score[endgame][KNIGHT][mirror_scores[square]];
 				break;
 			case b:
-				// Positional interpolated score:
-				if (game_phase == middlegame)
-				{
-					score -= (positional_score[opening][BISHOP][mirror_scores[square]] * game_phase_score +
-										positional_score[endgame][BISHOP][mirror_scores[square]] * (opening_phase_score - game_phase_score)) /
-									 opening_phase_score;
-				}
-				// Positional score:
-				else
-				{
-					score -= positional_score[game_phase][BISHOP][mirror_scores[square]];
-				}
+				// Calculate positional (opening and endgame) scores:
+				score_opening -= positional_score[opening][BISHOP][mirror_scores[square]];
+				score_endgame -= positional_score[endgame][BISHOP][mirror_scores[square]];
 				/* // Mobility:
 				score -= count_bits(get_bishop_attacks(square, occupancies[both])); */
 				break;
 			case r:
-				// Positional interpolated score:
-				if (game_phase == middlegame)
-				{
-					score -= (positional_score[opening][ROOK][mirror_scores[square]] * game_phase_score +
-										positional_score[endgame][ROOK][mirror_scores[square]] * (opening_phase_score - game_phase_score)) /
-									 opening_phase_score;
-				}
-				// Positional score:
-				else
-				{
-					score -= positional_score[game_phase][ROOK][mirror_scores[square]];
-				}
+				// Calculate positional (opening and endgame) scores:
+				score_opening -= positional_score[opening][ROOK][mirror_scores[square]];
+				score_endgame -= positional_score[endgame][ROOK][mirror_scores[square]];
 				/* // Semi open file bonus:
 				if ((bitboards[p] & file_masks[square]) == 0)
 				{
@@ -3221,34 +3111,16 @@ static inline int evaluate()
 				} */
 				break;
 			case q:
-				// Positional interpolated score:
-				if (game_phase == middlegame)
-				{
-					score -= (positional_score[opening][QUEEN][mirror_scores[square]] * game_phase_score +
-										positional_score[endgame][QUEEN][mirror_scores[square]] * (opening_phase_score - game_phase_score)) /
-									 opening_phase_score;
-				}
-				// Positional score:
-				else
-				{
-					score -= positional_score[game_phase][QUEEN][mirror_scores[square]];
-				}
+				// Calculate positional (opening and endgame) scores:
+				score_opening -= positional_score[opening][QUEEN][mirror_scores[square]];
+				score_endgame -= positional_score[endgame][QUEEN][mirror_scores[square]];
 				/* // Mobility:
 				score -= count_bits(get_queen_attacks(square, occupancies[both])); */
 				break;
 			case k:
-				// Positional interpolated score:
-				if (game_phase == middlegame)
-				{
-					score -= (positional_score[opening][KING][mirror_scores[square]] * game_phase_score +
-										positional_score[endgame][KING][mirror_scores[square]] * (opening_phase_score - game_phase_score)) /
-									 opening_phase_score;
-				}
-				// Positional score:
-				else
-				{
-					score -= positional_score[game_phase][KING][mirror_scores[square]];
-				}
+				// Calculate positional (opening and endgame) scores:
+				score_opening -= positional_score[opening][KING][mirror_scores[square]];
+				score_endgame -= positional_score[endgame][KING][mirror_scores[square]];
 				/* // Semi open file penalty:
 				if ((bitboards[p] & file_masks[square]) == 0)
 				{
@@ -3268,6 +3140,37 @@ static inline int evaluate()
 			// Pop LS1B:
 			pop_bit(bitboard, square);
 		}
+	}
+	/*
+		Now in order to calculate interpolated score
+		for a given game phase we use this formula
+		(same for material and positional scores):
+
+		(
+			score_opening * game_phase_score +
+			score_endgame * (opening_phase_score - game_phase_score)
+		) / opening_phase_score
+
+		E.g. the score for pawn on d4 at phase say 5000 would be
+		interpolated_score = (12 * 5000 + (-7) * (6192 - 5000)) / 6192 = 8,342377261
+	*/
+	// Middlegame (interpolated) score:
+	if (game_phase == middlegame)
+	{
+		// Interpolate the score:
+		score = (score_opening * game_phase_score + score_endgame * (opening_phase_score - game_phase_score)) / opening_phase_score;
+	}
+	// Opening score:
+	else if (game_phase == opening)
+	{
+		// Assign the score:
+		score = score_opening;
+	}
+	// Endgame score:
+	else
+	{
+		// Assign the score:
+		score = score_endgame;
 	}
 	// Return final evaluation based on side:
 	return (side == white) ? score : -score;
@@ -4513,6 +4416,8 @@ int main()
 		// Connect to the GUI:
 		uci_loop();
 	}
+	// Free hash table memory on exit:
+	free(hash_table);
 	// Return:
 	return 0;
 }
